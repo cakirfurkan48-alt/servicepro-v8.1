@@ -1,0 +1,236 @@
+{
+    "appearance": {
+        "theme": {
+            "mode": "dark",
+            "primaryColor": "#0ea5e9",
+            "secondaryColor": "#6366f1",
+            "successColor": "#10b981",
+            "warningColor": "#f59e0b",
+            "errorColor": "#ef4444",
+            "backgroundColor": "#0f172a",
+            "surfaceColor": "#1e293b",
+            "borderColor": "#475569"
+        },
+        "typography": {
+            "fontFamily": "Inter",
+            "baseFontSize": 16,
+            "headingWeight": 700,
+            "bodyWeight": 400
+        },
+        "layout": {
+            "borderRadius": 10,
+            "spacing": "normal",
+            "sidebarWidth": 260
+        },
+        "branding": {
+            "appName": "ServicePRO",
+            "slogan": "Tekne Teknik Servis Takip Sistemi",
+            "logoUrl": null,
+            "faviconUrl": null
+        }
+    },
+    "content": {
+        "locations": [
+            {
+                "id": "yatmarin",
+                "label": "Yatmarın (Merkez)",
+                "color": "#0ea5e9",
+                "icon": "⚓"
+            },
+            {
+                "id": "netsel",
+                "label": "Netsel",
+                "color": "#8b5cf6",
+                "icon": "🏝️"
+            },
+            {
+                "id": "dis_servis",
+                "label": "Dış Servis",
+                "color": "#f59e0b",
+                "icon": "🚗"
+            }
+        ],
+        "statuses": [
+            {
+                "id": "RANDEVU_VERILDI",
+                "label": "Randevu Verildi",
+                "color": "#6366f1",
+                "icon": "📅"
+            },
+            {
+                "id": "DEVAM_EDIYOR",
+                "label": "Devam Ediyor",
+                "color": "#0ea5e9",
+                "icon": "🔧"
+            },
+            {
+                "id": "PARCA_BEKLIYOR",
+                "label": "Parça Bekliyor",
+                "color": "#f59e0b",
+                "icon": "📦"
+            },
+            {
+                "id": "MUSTERI_ONAY_BEKLIYOR",
+                "label": "Müşteri Onay Bekliyor",
+                "color": "#8b5cf6",
+                "icon": "⏳"
+            },
+            {
+                "id": "RAPOR_BEKLIYOR",
+                "label": "Rapor Bekliyor",
+                "color": "#ec4899",
+                "icon": "📝"
+            },
+            {
+                "id": "KESIF_KONTROL",
+                "label": "Keşif/Kontrol",
+                "color": "#14b8a6",
+                "icon": "🔍"
+            },
+            {
+                "id": "TAMAMLANDI",
+                "label": "Tamamlandı",
+                "color": "#10b981",
+                "icon": "✅"
+            }
+        ],
+        "serviceTypes": [
+            {
+                "id": "paket",
+                "label": "Paket İş (Rutin)",
+                "multiplier": 1
+            },
+            {
+                "id": "saatlik",
+                "label": "Saatlik İş",
+                "multiplier": 1.2
+            },
+            {
+                "id": "acil",
+                "label": "Acil Servis",
+                "multiplier": 1.5
+            },
+            {
+                "id": "proje",
+                "label": "Proje Bazlı",
+                "multiplier": 2
+            }
+        ],
+        "personnelTitles": [
+            {
+                "id": "ustabasi",
+                "label": "Ustabaşı",
+                "level": 3
+            },
+            {
+                "id": "teknisyen",
+                "label": "Teknisyen",
+                "level": 2
+            },
+            {
+                "id": "cirak",
+                "label": "Çırak",
+                "level": 1
+            }
+        ]
+    },
+    "menu": {
+        "sidebar": [
+            {
+                "id": "dashboard",
+                "href": "/",
+                "label": "Dashboard",
+                "icon": "📊",
+                "visible": true,
+                "adminOnly": false
+            },
+            {
+                "id": "planlama",
+                "href": "/planlama",
+                "label": "Servis Planlama",
+                "icon": "📅",
+                "visible": true,
+                "adminOnly": false
+            },
+            {
+                "id": "personel",
+                "href": "/personel",
+                "label": "Personel Yönetimi",
+                "icon": "👥",
+                "visible": true,
+                "adminOnly": false
+            },
+            {
+                "id": "puanlama",
+                "href": "/puanlama",
+                "label": "Marlin Yıldızı",
+                "icon": "⭐",
+                "visible": true,
+                "adminOnly": false
+            },
+            {
+                "id": "gecmis",
+                "href": "/puanlama/gecmis",
+                "label": "Geçmiş & Klasman",
+                "icon": "🏆",
+                "visible": true,
+                "adminOnly": false
+            },
+            {
+                "id": "deger",
+                "href": "/deger",
+                "label": "Aylık Değerlendirme",
+                "icon": "📝",
+                "visible": true,
+                "adminOnly": false
+            },
+            {
+                "id": "whatsapp",
+                "href": "/raporlar/whatsapp",
+                "label": "WhatsApp Rapor",
+                "icon": "📤",
+                "visible": true,
+                "adminOnly": false
+            },
+            {
+                "id": "ayarlar",
+                "href": "/ayarlar",
+                "label": "Ayarlar",
+                "icon": "⚙️",
+                "visible": true,
+                "adminOnly": true
+            }
+        ],
+        "quickLinks": [
+            {
+                "id": "yeni_servis",
+                "href": "/planlama/yeni",
+                "label": "Yeni Servis Ekle",
+                "icon": "➕"
+            },
+            {
+                "id": "whatsapp_rapor",
+                "href": "/raporlar/whatsapp",
+                "label": "WhatsApp Rapor",
+                "icon": "📤"
+            },
+            {
+                "id": "degerlendirme",
+                "href": "/deger",
+                "label": "Aylık Değerlendirme",
+                "icon": "📝"
+            }
+        ]
+    },
+    "system": {
+        "company": {
+            "name": "Marlin Yatçılık",
+            "address": "Yatmarın Marina, Marmaris",
+            "phone": "+90 252 XXX XX XX",
+            "email": "info@marlinyatcilik.com",
+            "whatsapp": "+90 5XX XXX XX XX"
+        },
+        "version": "8.0",
+        "lastBackup": null
+    }
+}
