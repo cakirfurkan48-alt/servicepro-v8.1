@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useAdmin } from '@/lib/admin-context';
 import { Icon } from '@/components/Icon';
 import { useEffect, useState } from 'react';
+import NotificationCenter from '@/components/NotificationCenter';
 
 // Default Fallback Menu
 const defaultMenu = {
@@ -94,6 +95,7 @@ export default function Sidebar() {
                                 {isAdmin ? 'Admin' : 'Yetkili'}
                             </div>
                         </div>
+                        <NotificationCenter />
                     </div>
                     <button
                         onClick={logout}
