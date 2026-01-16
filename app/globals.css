@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* ===== SHADCN/UI CSS VARIABLES ===== */
 @layer base {
@@ -52,10 +50,12 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
+
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
 
@@ -1525,6 +1525,7 @@ body {
 .sidebar-footer {
   padding: var(--space-xs) var(--space-md) var(--space-md);
   text-align: center;
-  border-top: 1px solid var(--color-border); /* Optional separator */
+  border-top: 1px solid var(--color-border);
+  /* Optional separator */
   background: var(--color-bg);
 }
