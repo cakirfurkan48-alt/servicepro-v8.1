@@ -6,6 +6,7 @@ import StatCard from '@/components/StatCard';
 import RecentServices from '@/components/RecentServices';
 import QuickActions from '@/components/QuickActions';
 import TopPerformers from '@/components/TopPerformers';
+import DashboardCharts from '@/components/DashboardCharts';
 import { fetchServices, fetchStats } from '@/lib/api';
 import { Service } from '@/types';
 
@@ -56,7 +57,7 @@ export default function Dashboard() {
             </header>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-4" style={{ marginBottom: 'var(--space-xl)' }}>
+            <div className="grid grid-cols-4 gap-6 mb-8">
                 <StatCard
                     icon="📅"
                     value={stats.bugunServisleri}
@@ -82,6 +83,9 @@ export default function Dashboard() {
                     color="var(--color-accent-gold)"
                 />
             </div>
+
+            {/* Charts Section */}
+            <DashboardCharts />
 
             <div className="grid" style={{ gridTemplateColumns: '2fr 1fr', gap: 'var(--space-xl)' }}>
                 {/* Today's Services */}

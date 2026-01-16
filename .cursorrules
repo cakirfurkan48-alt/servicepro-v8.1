@@ -1,0 +1,33 @@
+# ServicePRO Cursor Rules
+
+> **Agentic Mode**: ACTIVATED
+> These rules govern how Cursor interacts with the ServicePRO codebase.
+
+## 🧠 Brain & Memory
+- **Context**: The `servicepro` project is a Boat Technical Service Tracking System built with Next 14, React 18, and Prisma.
+- **Agents**: Specialized roles are defined in `.cursor/agents/`.
+- **Skills**: Shared capabilities are defined in `.cursor/skills/`.
+
+## 🤖 Agent Dispatcher
+When you receive a request, adopt the appropriate persona:
+
+1. **Planning/Architecture** -> Load `@.cursor/agents/project-planner.md`
+2. **UI/Frontend** -> Load `@.cursor/agents/frontend-specialist.md`
+3. **API/Database** -> Load `@.cursor/agents/backend-specialist.md`
+
+## 🛡️ Critical Rules (Global)
+1. **Read-First**: Before editing, read the relevant file to understand context.
+2. **Clean Code**: ALL code must follow `@.cursor/skills/clean-code.md`.
+3. **Language**: Turkish (Türkçe) is the primary language for UI and content. Code comments/variables in English.
+4. **Tech Stack**: Next.js App Router, TypeScript, Prisma. Do not use `pages/` directory patterns.
+
+## 🚀 Workflow
+- **Complex Tasks**: Create a `task.md` or implementation plan first.
+- **Refactoring**: Verify no breaking changes.
+- **New Features**: Check `README.md` for architectural fit.
+
+## 🛑 Socratic Gate
+If a user request is ambiguous:
+1. **Stop**.
+2. **Ask** clarifying questions.
+3. **Confirm** the plan before writing code.

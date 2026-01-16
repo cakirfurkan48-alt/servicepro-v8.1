@@ -107,7 +107,7 @@ export default function Sidebar() {
 
             <div className="sidebar-footer">
                 <div style={{ fontSize: '0.7rem', color: 'var(--color-text-subtle)' }}>
-                    ServicePRO v7.0
+                    ServicePRO v2.0 Pro
                 </div>
                 <div style={{ fontSize: '0.65rem', color: 'var(--color-text-subtle)', marginTop: '2px' }}>
                     Marlin Yatçılık

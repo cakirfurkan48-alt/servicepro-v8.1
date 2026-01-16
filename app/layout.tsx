@@ -5,6 +5,7 @@ import { SessionProvider } from 'next-auth/react';
 import { AdminProvider } from '@/lib/admin-context';
 import ThemeProvider from '@/components/ThemeProvider';
 import Sidebar from '@/components/Sidebar';
+import GlobalSearch from '@/components/GlobalSearch';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
@@ -56,6 +57,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     return (
         <>
             <Sidebar />
+            <GlobalSearch />
             <main className="main-content">
                 {children}
             </main>
