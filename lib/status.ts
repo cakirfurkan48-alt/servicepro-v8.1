@@ -100,56 +100,56 @@ export const STATUS_META: Record<StatusValue, {
         label: 'Planlandı/Randevu',
         bg: '#e2f0d9',
         text: '#1f6f3d',
-        icon: '📅',
+        icon: 'calendar',
         isActive: true
     },
     [STATUS.DEVAM_EDIYOR]: {
         label: 'Devam Ediyor',
         bg: '#d9ead3',
         text: '#1f6f3d',
-        icon: '🔄',
+        icon: 'inProgress',
         isActive: true
     },
     [STATUS.PARCA_BEKLIYOR]: {
         label: 'Parça Bekliyor',
         bg: '#cfe2f3',
         text: '#1d4ed8',
-        icon: '📦',
+        icon: 'parts',
         isActive: true
     },
     [STATUS.ONAY_BEKLIYOR]: {
         label: 'Onay Bekliyor',
         bg: '#bdd7ee',
         text: '#1e40af',
-        icon: '✋',
+        icon: 'hourglass',
         isActive: true
     },
     [STATUS.RAPOR_BEKLIYOR]: {
         label: 'Rapor Bekliyor',
         bg: '#9dc3e6',
         text: '#1e3a8a',
-        icon: '📝',
+        icon: 'clipboardText',
         isActive: true
     },
     [STATUS.TAMAMLANDI]: {
         label: 'Tamamlandı',
         bg: '#ead1dc',
         text: '#5b21b6',
-        icon: '✅',
+        icon: 'completed',
         isActive: false
     },
     [STATUS.KESIF_KONTROL]: {
         label: 'Keşif/Kontrol',
         bg: '#e6e0f8',
         text: '#5b21b6',
-        icon: '🔍',
+        icon: 'search',
         isActive: false
     },
     [STATUS.IPTAL]: {
         label: 'İptal Edildi',
         bg: '#fecaca',
         text: '#991b1b',
-        icon: '🚫',
+        icon: 'cancel',
         isActive: false,
         isCancelled: true,
     },

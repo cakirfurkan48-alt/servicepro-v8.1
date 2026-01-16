@@ -16,6 +16,7 @@ export interface AuditLogEntry {
         after?: any;
         field?: string;
         note?: string;
+        changes?: Record<string, { from: any; to: any }>;
     };
 }
 
@@ -187,6 +188,19 @@ export default function AuditLog({ serviceId, logs: propLogs }: AuditLogProps) {
                                         <div>
                                             🤝 Destek: {(log.details.after.supports || []).join(', ') || '-'}
                                         </div>
+                                    </div>
+                                )}
+
+                                {log.details.changes && (
+                                    <div className="space-y-1 mt-1">
+                                        {Object.entries(log.details.changes).map(([field, change]) => (
+                                            <div key={field} className="text-xs flex items-center gap-2">
+                                                <span className="font-medium text-muted-foreground">{field}:</span>
+                                                <span className="line-through opacity-70">{String(change.from || '-')}</span>
+                                                <span>→</span>
+                                                <span className="font-medium">{String(change.to || '-')}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
 

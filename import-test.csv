@@ -1,0 +1,4 @@
+tarih,saat,tekne adı,adres,yer,servis aciklamasi,irtibat kisi,telefon,durum
+15.01.2024,10:00,Test Tekne 1,Marmaris Yatmarin,P3,Yıllık bakım,Ahmet Kaptan,5551234567,PLANLANDI-RANDEVU
+16.01.2024,14:00,Test Tekne 2,Netsel Marina,F12,Motor kontrol,Mehmet Bey,5559876543,DEVAM EDIYOR
+10.01.2024,09:30,Test Tekne 3,Datça Liman,,Acil servis,Ali Bey,,TAMAMLANDI

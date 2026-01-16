@@ -1,30 +1,32 @@
 // ==================== SERVIS DURUMLARI ====================
 export type ServisDurumu =
-    | 'RANDEVU_VERILDI'       // Randevu verilen
-    | 'DEVAM_EDIYOR'          // Devam eden
-    | 'PARCA_BEKLIYOR'        // Parça bekleyen
-    | 'MUSTERI_ONAY_BEKLIYOR' // Müşteri onayı bekleyen
-    | 'RAPOR_BEKLIYOR'        // Atölyeden rapor bekleyen
-    | 'KESIF_KONTROL'         // Keşif-Kontrol
-    | 'TAMAMLANDI';           // Tamamen tamamlanan
+    | 'PLANLANDI-RANDEVU'
+    | 'DEVAM EDİYOR'
+    | 'ONAY BEKLİYOR'
+    | 'RAPOR BEKLİYOR'
+    | 'PARÇA BEKLİYOR'
+    | 'TAMAMLANDI'
+    | 'KEŞİF-KONTROL'
+    | 'İPTAL';
 
 export const DURUM_CONFIG: Record<ServisDurumu, { label: string; color: string; bgColor: string; icon: string }> = {
-    RANDEVU_VERILDI: { label: 'Randevu Verildi', color: '#0891b2', bgColor: '#ecfeff', icon: '📅' },
-    DEVAM_EDIYOR: { label: 'Devam Ediyor', color: '#16a34a', bgColor: '#f0fdf4', icon: '🔄' },
-    PARCA_BEKLIYOR: { label: 'Parça Bekliyor', color: '#ea580c', bgColor: '#fff7ed', icon: '📦' },
-    MUSTERI_ONAY_BEKLIYOR: { label: 'Onay Bekliyor', color: '#ca8a04', bgColor: '#fefce8', icon: '⏳' },
-    RAPOR_BEKLIYOR: { label: 'Rapor Bekliyor', color: '#2563eb', bgColor: '#eff6ff', icon: '📝' },
-    KESIF_KONTROL: { label: 'Keşif-Kontrol', color: '#9333ea', bgColor: '#faf5ff', icon: '🔍' },
-    TAMAMLANDI: { label: 'Tamamlandı', color: '#57534e', bgColor: '#f5f5f4', icon: '✅' },
+    'PLANLANDI-RANDEVU': { label: 'Randevu Verildi', color: '#0891b2', bgColor: '#ecfeff', icon: 'calendar' },
+    'DEVAM EDİYOR': { label: 'Devam Ediyor', color: '#16a34a', bgColor: '#f0fdf4', icon: 'inProgress' },
+    'PARÇA BEKLİYOR': { label: 'Parça Bekliyor', color: '#ea580c', bgColor: '#fff7ed', icon: 'parts' },
+    'ONAY BEKLİYOR': { label: 'Onay Bekliyor', color: '#ca8a04', bgColor: '#fefce8', icon: 'hourglass' },
+    'RAPOR BEKLİYOR': { label: 'Rapor Bekliyor', color: '#2563eb', bgColor: '#eff6ff', icon: 'clipboardText' },
+    'KEŞİF-KONTROL': { label: 'Keşif-Kontrol', color: '#9333ea', bgColor: '#faf5ff', icon: 'search' },
+    'TAMAMLANDI': { label: 'Tamamlandı', color: '#57534e', bgColor: '#f5f5f4', icon: 'completed' },
+    'İPTAL': { label: 'İptal', color: '#dc2626', bgColor: '#fef2f2', icon: 'cancel' },
 };
 
 // ==================== KONUM GRUPLARI ====================
 export type KonumGrubu = 'YATMARIN' | 'NETSEL' | 'DIS_SERVIS';
 
 export const KONUM_CONFIG: Record<KonumGrubu, { label: string; color: string; icon: string }> = {
-    YATMARIN: { label: 'Yatmarin (Merkez)', color: '#0f766e', icon: '🏠' },
-    NETSEL: { label: 'Netsel', color: '#1d4ed8', icon: '⚓' },
-    DIS_SERVIS: { label: 'Dış Servis', color: '#7c3aed', icon: '🚗' },
+    YATMARIN: { label: 'Yatmarin (Merkez)', color: '#0f766e', icon: 'home' },
+    NETSEL: { label: 'Netsel', color: '#1d4ed8', icon: 'waves' },
+    DIS_SERVIS: { label: 'Dış Servis', color: '#7c3aed', icon: 'mapPin' },
 };
 
 export function getKonumGrubu(adres: string): KonumGrubu {
@@ -62,10 +64,10 @@ export interface Personnel {
 }
 
 export const UNVAN_CONFIG: Record<PersonelUnvan, { label: string; icon: string }> = {
-    usta: { label: 'Usta', icon: '👨‍🔧' },
-    cirak: { label: 'Çırak', icon: '👷' },
-    yonetici: { label: 'Yönetici', icon: '👔' },
-    ofis: { label: 'Ofis', icon: '🏢' },
+    usta: { label: 'Usta', icon: 'user' },
+    cirak: { label: 'Çırak', icon: 'usersThree' },
+    yonetici: { label: 'Yönetici', icon: 'user' },
+    ofis: { label: 'Ofis', icon: 'house' },
 };
 
 // ==================== SERVİS ====================
@@ -82,6 +84,9 @@ export interface ParcaBekleme {
     miktar: number;
     tedarikci?: string;
     beklenenTarih?: string;
+    // New fields Sprint 3
+    status?: 'ORDERED' | 'RECEIVED' | 'CANCELLED' | 'NEEDED';
+    notes?: string;
 }
 
 export interface Service {
@@ -90,17 +95,21 @@ export interface Service {
     saat?: string;
     tekneAdi: string;
     adres: string;
-    yer: string;
+    yer?: string;
     servisAciklamasi: string;
     irtibatKisi?: string;
     telefon?: string;
-    isTuru: IsTuru;
+    isTuru?: IsTuru;
     durum: ServisDurumu;
     atananPersonel: PersonelAtama[];
     ofisYetkilisi?: string;
     bekleyenParcalar?: ParcaBekleme[];
     taseronNotlari?: string;
     kapanisRaporu?: KapanisRaporu;
+    closureTeam?: {
+        responsibles: string[];
+        supports: string[];
+    };
 }
 
 // ==================== KAPANIŞ RAPORU ====================

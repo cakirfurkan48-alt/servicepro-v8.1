@@ -1,6 +1,6 @@
 'use client';
 
-import { IconName, IconSize, IconWeight, getIconSize, getIconClass, EMOJI_FALLBACKS, APP_ICONS } from '@/lib/icons';
+import { IconName, IconSize, IconWeight, getIconSize, EMOJI_FALLBACKS, APP_ICONS } from '@/lib/icons';
 
 interface IconProps {
     name: IconName;
@@ -12,6 +12,7 @@ interface IconProps {
 }
 
 // SVG-based Icon component using Phosphor CDN
+// SVG-based Icon component using Phosphor CDN
 export function Icon({
     name,
     size = 'md',
@@ -21,24 +22,23 @@ export function Icon({
     onClick,
 }: IconProps) {
     const pixelSize = getIconSize(size);
-    const phosphorName = APP_ICONS[name];
+    const IconComponent = APP_ICONS[name];
 
-    // Use Phosphor Icons web component style
-    const iconClass = `ph ${getIconClass(name, weight)} ${className}`.trim();
+    if (!IconComponent) {
+        // Fallback for missing icons
+        return <EmojiIcon name={name} size={size} className={className} />;
+    }
 
     return (
-        <i
-            className={iconClass}
-            style={{
-                fontSize: `${pixelSize}px`,
-                color: color,
-                cursor: onClick ? 'pointer' : 'inherit',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-            }}
+        <IconComponent
+            size={pixelSize}
+            weight={weight}
+            color={color}
+            className={className}
             onClick={onClick}
-            aria-hidden="true"
+            style={{
+                cursor: onClick ? 'pointer' : undefined,
+            }}
         />
     );
 }

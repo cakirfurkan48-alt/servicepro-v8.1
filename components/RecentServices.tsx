@@ -17,7 +17,7 @@ const mockServices: Service[] = [
         irtibatKisi: 'Ahmet Kaptan',
         telefon: '+905321234567',
         isTuru: 'paket',
-        durum: 'DEVAM_EDIYOR',
+        durum: 'DEVAM EDİYOR',
         atananPersonel: [{ personnelId: '1', personnelAd: 'Mehmet Güven', rol: 'sorumlu' }],
     },
     {
@@ -31,7 +31,7 @@ const mockServices: Service[] = [
         irtibatKisi: 'Nermin Hanım',
         telefon: '+905357276156',
         isTuru: 'ariza',
-        durum: 'PARCA_BEKLIYOR',
+        durum: 'PARÇA BEKLİYOR',
         atananPersonel: [
             { personnelId: '2', personnelAd: 'İbrahim Yayalık', rol: 'sorumlu' },
             { personnelId: '3', personnelAd: 'Alican Yaylalı', rol: 'destek' },
@@ -46,7 +46,7 @@ const mockServices: Service[] = [
         yer: 'DSV Marina',
         servisAciklamasi: 'Pasarella Montajı + Genel Kontrol',
         isTuru: 'proje',
-        durum: 'RAPOR_BEKLIYOR',
+        durum: 'RAPOR BEKLİYOR',
         atananPersonel: [{ personnelId: '4', personnelAd: 'Sercan Sarız', rol: 'sorumlu' }],
     },
 ];
@@ -104,7 +104,7 @@ export default function RecentServices({ services }: RecentServicesProps) {
                                 </td>
                                 <td>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                        {service.atananPersonel.map((p, i) => (
+                                        {(service.atananPersonel ?? []).map((p, i) => (
                                             <span
                                                 key={i}
                                                 style={{

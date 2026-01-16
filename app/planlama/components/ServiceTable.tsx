@@ -14,120 +14,231 @@ import {
     isCompletedStatus
 } from '@/lib/status';
 
-interface Service {
-    id: string;
-    tarih: string;
-    saat?: string;
-    tekneAdi: string;
-    adres: string;
-    yer?: string;
-    servisAciklamasi: string;
-    durum: string; // Can be legacy or new format
-    atananPersonel?: { rol: string; personnelAd: string }[];
-    closureTeam?: {
-        responsibles: string[];
-        supports: string[];
-    };
-}
+import { Service } from '@/types';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Icon, IconName } from '@/lib/icons';
 
 interface ServiceTableProps {
     services: Service[];
     showCheckbox: boolean;
     selectedIds: Set<string>;
+    isManualOrder: boolean;
     onToggleSelect: (id: string) => void;
     onDurumChange: (service: Service, newDurum: StatusValue) => void;
     onPartsClick: (service: Service) => void;
+    onReorder?: (newOrder: Service[]) => void;
 }
 
 export default function ServiceTable({
     services,
     showCheckbox,
     selectedIds,
+    isManualOrder,
     onToggleSelect,
     onDurumChange,
     onPartsClick,
+    onReorder
 }: ServiceTableProps) {
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id || !onReorder) return;
+
+        const activeService = services.find(s => s.id === active.id);
+        const overService = services.find(s => s.id === over.id);
+
+        if (!activeService || !overService) return;
+
+        // Group Constraint Verification
+        const activeIsYat = isYatmarin(activeService.adres, activeService.yer);
+        const overIsYat = isYatmarin(overService.adres, overService.yer);
+
+        if (activeIsYat !== overIsYat) {
+            // Cancel drag if crossing groups (Yatmarin <-> Other)
+            return;
+        }
+
+        const oldIndex = services.findIndex(s => s.id === active.id);
+        const newIndex = services.findIndex(s => s.id === over.id);
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+            onReorder(arrayMove(services, oldIndex, newIndex));
+        }
+    };
+
     return (
-        <div className="rounded-xl border border-border overflow-hidden">
-            <Table>
-                <TableHeader>
-                    <TableRow className="bg-muted/50">
-                        {showCheckbox && <TableHead className="w-10"></TableHead>}
-                        <TableHead>Tarih</TableHead>
-                        <TableHead>Tekne</TableHead>
-                        <TableHead>Konum</TableHead>
-                        <TableHead>Servis</TableHead>
-                        <TableHead>Durum</TableHead>
-                        <TableHead>Ekip</TableHead>
-                        <TableHead className="text-right">İşlemler</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {services.length === 0 ? (
-                        <TableRow>
-                            <TableCell colSpan={showCheckbox ? 8 : 7} className="text-center py-12">
-                                <div className="text-muted-foreground">
-                                    <span className="text-4xl block mb-2">📭</span>
-                                    <span>Gösterilecek servis bulunamadı</span>
-                                </div>
-                            </TableCell>
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+        >
+            <div className="rounded-xl border border-border overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-muted/30 border-b border-border/60 hover:bg-muted/30">
+                            {isManualOrder && <TableHead className="w-10 pl-4"></TableHead>}
+                            {showCheckbox && <TableHead className="w-10"></TableHead>}
+                            <TableHead className="h-10 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Tarih</TableHead>
+                            <TableHead className="h-10 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Tekne</TableHead>
+                            <TableHead className="h-10 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Konum</TableHead>
+                            <TableHead className="h-10 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Servis</TableHead>
+                            <TableHead className="h-10 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Durum</TableHead>
+                            <TableHead className="h-10 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">Ekip</TableHead>
+                            <TableHead className="h-10 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground/80 pr-6">İşlemler</TableHead>
                         </TableRow>
-                    ) : (
-                        services.map((service) => (
-                            <ServiceRow
-                                key={service.id}
-                                service={service}
-                                showCheckbox={showCheckbox}
-                                isSelected={selectedIds.has(service.id)}
-                                onToggleSelect={() => onToggleSelect(service.id)}
-                                onDurumChange={(newDurum) => onDurumChange(service, newDurum)}
-                                onPartsClick={() => onPartsClick(service)}
-                            />
-                        ))
-                    )}
-                </TableBody>
-            </Table>
-        </div>
+                    </TableHeader>
+                    <TableBody>
+                        {services.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={showCheckbox ? (isManualOrder ? 9 : 8) : (isManualOrder ? 8 : 7)} className="text-center py-12">
+                                    <div className="flex flex-col items-center gap-4 text-muted-foreground">
+                                        <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center">
+                                            <Icon name="clipboardText" size={32} weight="duotone" />
+                                        </div>
+                                        <span>Gösterilecek servis bulunamadı</span>
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            <SortableContext
+                                items={services.map(s => s.id)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                {services.map((service) => (
+                                    <SortableServiceRow
+                                        key={service.id}
+                                        service={service}
+                                        showCheckbox={showCheckbox}
+                                        isManualOrder={isManualOrder}
+                                        isSelected={selectedIds.has(service.id)}
+                                        onToggleSelect={() => onToggleSelect(service.id)}
+                                        onDurumChange={(newDurum: StatusValue) => onDurumChange(service, newDurum)}
+                                        onPartsClick={() => onPartsClick(service)}
+                                    />
+                                ))}
+                            </SortableContext>
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+        </DndContext>
     );
 }
 
-interface ServiceRowProps {
+// ... SortableServiceRow remains mostly same
+
+// SortableServiceRow Wrapper
+function SortableServiceRow({ service, ...props }: any) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: service.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    return (
+        <ServiceRow
+            ref={setNodeRef}
+            style={style}
+            isDragging={isDragging}
+            dragHandleProps={props.isManualOrder ? { ...attributes, ...listeners } : {}}
+            service={service}
+            {...props}
+        />
+    );
+}
+
+interface ServiceRowInnerProps {
     service: Service;
     showCheckbox: boolean;
+    isManualOrder: boolean;
     isSelected: boolean;
     onToggleSelect: () => void;
-    onDurumChange: (durum: StatusValue) => void;
+    onDurumChange: (newDurum: StatusValue) => void;
     onPartsClick: () => void;
+    dragHandleProps?: any;
+    style?: any;
+    ref?: any;
+    isDragging?: boolean;
 }
 
 function ServiceRow({
     service,
     showCheckbox,
+    isManualOrder,
     isSelected,
     onToggleSelect,
     onDurumChange,
     onPartsClick,
-}: ServiceRowProps) {
+    dragHandleProps,
+    style,
+    ref,
+    isDragging
+}: ServiceRowInnerProps) {
     const [showDurumDropdown, setShowDurumDropdown] = useState(false);
     const isYatmarinService = isYatmarin(service.adres, service.yer);
-
-    // Get status meta (handle both legacy and new formats)
     const statusMeta = STATUS_META[service.durum as StatusValue] || STATUS_META[STATUS.PLANLANDI_RANDEVU];
     const isCompleted = isCompletedStatus(service.durum as StatusValue);
 
-    // Closure team summary
     const responsibleCount = service.closureTeam?.responsibles?.length || 0;
     const supportCount = service.closureTeam?.supports?.length || 0;
     const responsibleName = service.atananPersonel?.find(p => p.rol === 'sorumlu')?.personnelAd;
 
     return (
         <TableRow
+            ref={ref}
+            style={style}
             className={`
-                ${isSelected ? 'bg-primary/10' : ''}
-                ${isYatmarinService ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-sky-50/50 dark:bg-sky-950/10'}
-                ${isCompleted ? 'opacity-60' : ''}
+                group border-b border-border/40 transition-colors
+            ${isSelected ? 'bg-primary/5' : ''}
+            ${isYatmarinService
+                    ? 'bg-amber-50/40 dark:bg-amber-950/20 hover:bg-amber-50/80 dark:hover:bg-amber-950/40'
+                    : 'bg-card hover:bg-muted/30'}
+            ${isCompleted ? 'opacity-60 grayscale-[0.5]' : ''}
+            ${isDragging ? 'shadow-2xl opacity-80 bg-background z-50 ring-2 ring-primary scale-[1.02]' : ''}
             `}
         >
+            {isManualOrder && (
+                <TableCell>
+                    <button
+                        className="cursor-grab hover:text-foreground text-muted-foreground/50 p-1 rounded hover:bg-muted"
+                        {...dragHandleProps}
+                        aria-label="Sıralamak için sürükleyin"
+                    >
+                        <Icon name="dotsSixVertical" size={16} />
+                    </button>
+                </TableCell>
+            )}
+
             {showCheckbox && (
                 <TableCell>
                     <input
@@ -135,6 +246,7 @@ function ServiceRow({
                         checked={isSelected}
                         onChange={onToggleSelect}
                         className="w-4 h-4 rounded border-border"
+                        aria-label="Satır seç"
                     />
                 </TableCell>
             )}
@@ -148,16 +260,16 @@ function ServiceRow({
 
             <TableCell>
                 <Link
-                    href={`/planlama/${service.id}`}
-                    className="font-medium text-primary hover:underline"
+                    href={`/ planlama / ${service.id} `}
+                    className="font-medium text-primary hover:underline flex items-center gap-1"
                 >
                     {service.tekneAdi}
+                    {isYatmarinService && (
+                        <span className="ml-2 text-xs bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded flex items-center gap-1">
+                            <Icon name="anchor" size={10} weight="fill" /> YATMARİN
+                        </span>
+                    )}
                 </Link>
-                {isYatmarinService && (
-                    <span className="ml-2 text-xs bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded">
-                        ⚓ YATMARİN
-                    </span>
-                )}
             </TableCell>
 
             <TableCell>
@@ -189,7 +301,8 @@ function ServiceRow({
                                 color: statusMeta.text
                             }}
                         >
-                            {statusMeta.icon} {statusMeta.label}
+                            <Icon name={statusMeta.icon as IconName} size={14} weight="duotone" />
+                            {statusMeta.label}
                         </span>
                     </button>
 
@@ -213,15 +326,16 @@ function ServiceRow({
                                                 setShowDurumDropdown(false);
                                             }}
                                             className={`
-                                                w-full text-left px-3 py-2 text-sm rounded-md transition-colors
+    w - full text - left px - 3 py - 2 text - sm rounded - md transition - colors flex items - center gap - 2
                                                 ${isCurrentStatus
                                                     ? 'bg-primary text-primary-foreground'
                                                     : 'hover:bg-accent text-foreground'
                                                 }
                                                 ${isCompletedOpt && !isCurrentStatus ? 'opacity-60' : ''}
-                                            `}
+    `}
                                         >
-                                            {meta.icon} {meta.label}
+                                            <Icon name={meta.icon as IconName} size={16} weight="duotone" />
+                                            {meta.label}
                                         </button>
                                     );
                                 })}
@@ -236,13 +350,13 @@ function ServiceRow({
                     {responsibleCount > 0 || supportCount > 0 ? (
                         <div className="flex flex-col gap-0.5">
                             {responsibleCount > 0 && (
-                                <span className="text-xs">
-                                    👤 Sorumlu: <strong>{responsibleCount}</strong>
+                                <span className="text-xs flex items-center gap-1">
+                                    <Icon name="user" size={12} weight="bold" /> Sorumlu: <strong>{responsibleCount}</strong>
                                 </span>
                             )}
                             {supportCount > 0 && (
-                                <span className="text-xs text-muted-foreground">
-                                    🤝 Destek: {supportCount}
+                                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Icon name="users" size={12} /> Destek: {supportCount}
                                 </span>
                             )}
                         </div>
@@ -255,11 +369,10 @@ function ServiceRow({
             </TableCell>
 
             <TableCell className="text-right">
-                <Link href={`/planlama/${service.id}`}>
-                    <Button variant="secondary" size="sm">
-                        👁️ Düzenle
-                    </Button>
-                </Link>
+                <Button variant="secondary" size="sm" onClick={onPartsClick}>
+                    <Icon name="eye" size={16} className="mr-1" />
+                    Düzenle
+                </Button>
             </TableCell>
         </TableRow>
     );

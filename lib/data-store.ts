@@ -136,7 +136,7 @@ export function getServisPuanlariByPersonnel(personnelId: string): ServisPuani[]
 export function getStats() {
     const services = getAllServices();
     const personnel = getAllPersonnel();
-    
+
     // Format today as DD.MM.YYYY to match CSV data (Turkish format)
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -146,9 +146,9 @@ export function getStats() {
 
     return {
         bugunServisleri: services.filter(s => s.tarih === today).length,
-        devamEdenler: services.filter(s => s.durum === 'DEVAM_EDIYOR' || s.durum === 'KESIF_KONTROL').length,
-        parcaBekleyenler: services.filter(s => s.durum === 'PARCA_BEKLIYOR').length,
-        randevular: services.filter(s => s.durum === 'RANDEVU_VERILDI').length,
+        devamEdenler: services.filter(s => s.durum === 'DEVAM EDİYOR' || s.durum === 'KEŞİF-KONTROL').length,
+        parcaBekleyenler: services.filter(s => s.durum === 'PARÇA BEKLİYOR').length,
+        randevular: services.filter(s => s.durum === 'PLANLANDI-RANDEVU').length,
         tamamlananlar: services.filter(s => s.durum === 'TAMAMLANDI').length,
         toplamServis: services.length,
         aktifPersonel: personnel.filter(p => p.aktif && p.rol === 'teknisyen').length,

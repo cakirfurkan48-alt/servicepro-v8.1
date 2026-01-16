@@ -111,8 +111,8 @@ export default function CompletionSidebar({
 
     if (!service || !isOpen) return null;
 
-    const gerekliAlanlar = RAPOR_GEREKSINIMLERI[service.isTuru] || [];
-    const raporBasarisi = hesaplaRaporBasarisi(rapor, service.isTuru);
+    const gerekliAlanlar = service.isTuru ? (RAPOR_GEREKSINIMLERI[service.isTuru] || []) : [];
+    const raporBasarisi = hesaplaRaporBasarisi(rapor, service.isTuru as IsTuru); // Cast or handle undefined inside
 
     const seciliPersoneller = personelSecimleri.filter(p => p.secili);
     const sorumlular = seciliPersoneller.filter(p => p.rol === 'sorumlu');
@@ -196,9 +196,10 @@ export default function CompletionSidebar({
 
                 {/* Content */}
                 <div className="flex-1 overflow-auto p-6 space-y-6">
-                    {/* İş Tipi Badge */}
                     <div className="inline-block px-3 py-1 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded text-sm font-semibold">
-                        {IS_TURU_CONFIG[service.isTuru]?.label} (×{IS_TURU_CONFIG[service.isTuru]?.carpan})
+                        {service.isTuru && IS_TURU_CONFIG[service.isTuru]
+                            ? `${IS_TURU_CONFIG[service.isTuru].label} (×${IS_TURU_CONFIG[service.isTuru].carpan})`
+                            : 'Belirsiz İş Türü'}
                     </div>
 
                     {/* Status Selection */}
@@ -220,6 +221,7 @@ export default function CompletionSidebar({
                                             }
                                         `}
                                         style={{
+                                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                                             backgroundColor: meta.bg,
                                             color: meta.text,
                                         }}
@@ -392,7 +394,7 @@ export default function CompletionSidebar({
                                 <div className="space-y-1">
                                     <div className="text-xs font-semibold text-primary">SORUMLU (Rapor Kalitesine Göre)</div>
                                     {sorumlular.map((p) => {
-                                        const puan = hesaplaBireyselPuan(raporBasarisi, service.isTuru, 'sorumlu', p.bonus);
+                                        const puan = hesaplaBireyselPuan(raporBasarisi, service.isTuru || 'paket', 'sorumlu', p.bonus);
                                         return (
                                             <PuanCard
                                                 key={p.personnelId}
@@ -411,7 +413,7 @@ export default function CompletionSidebar({
                                 <div className="space-y-1">
                                     <div className="text-xs font-semibold text-emerald-600">DESTEK (Sabit 80 Baz Puan)</div>
                                     {destekler.map((p) => {
-                                        const puan = hesaplaBireyselPuan(1, service.isTuru, 'destek', p.bonus);
+                                        const puan = hesaplaBireyselPuan(1, service.isTuru || 'paket', 'destek', p.bonus);
                                         return (
                                             <PuanCard
                                                 key={p.personnelId}

@@ -52,7 +52,7 @@ export default function ServiceDetailPage() {
     }
 
     const konumGrubu = getKonumGrubu(service.adres);
-    const isTuruConfig = IS_TURU_CONFIG[service.isTuru];
+    const isTuruConfig = service.isTuru ? IS_TURU_CONFIG[service.isTuru] : null;
 
     return (
         <div className="animate-fade-in">

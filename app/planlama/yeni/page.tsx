@@ -2,9 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { IsTuru, IS_TURU_CONFIG, ServisDurumu, DURUM_CONFIG } from '@/types';
+import { Icon, IconName } from '@/lib/icons';
+import { Service, ServisDurumu, DURUM_CONFIG, IS_TURU_CONFIG, IsTuru, YETKILI_LISTESI } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
-// Mock personnel data
+// Mock personnel data (Temporary)
 const personnel = [
     { id: '1', ad: 'Ali Can Yaylalı' },
     { id: '2', ad: 'Alican Yaylalı' },
@@ -25,7 +29,7 @@ const personnel = [
     { id: '17', ad: 'Volkan Özkan' },
 ];
 
-export default function YeniServisPage() {
+export default function NewServicePage() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -39,7 +43,7 @@ export default function YeniServisPage() {
         irtibatKisi: '',
         telefon: '',
         isTuru: 'paket' as IsTuru,
-        durum: 'DEVAM_EDIYOR' as ServisDurumu,
+        durum: 'PLANLANDI-RANDEVU' as ServisDurumu,
         sorumluId: '',
         destekId: '',
     });
@@ -48,66 +52,72 @@ export default function YeniServisPage() {
         e.preventDefault();
         setIsSubmitting(true);
 
-        // TODO: API call
-        console.log('Form data:', formData);
-
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        router.push('/planlama');
+        try {
+            // TODO: Replace with actual API call when backend is ready
+            console.log('Form data:', formData);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulating delay
+            toast.success('Servis oluşturuldu');
+            router.push('/planlama');
+        } catch (error) {
+            console.error(error);
+            toast.error('Servis oluşturulurken hata oluştu');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
-        <div className="animate-fade-in">
-            <header className="page-header">
-                <h1 className="page-title">➕ Yeni Servis Ekle</h1>
+        <div className="max-w-3xl mx-auto py-8 px-4 animate-fade-in">
+            <header className="mb-8 flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold flex items-center gap-2">
+                        <span className="text-2xl">✏️</span> Yeni Servis
+                    </h1>
+                    <p className="text-muted-foreground mt-1">Yeni bir servis kaydı oluşturun</p>
+                </div>
             </header>
 
-            <form onSubmit={handleSubmit} className="card" style={{ maxWidth: '800px' }}>
-                <div className="grid grid-cols-2" style={{ gap: 'var(--space-lg)' }}>
+            <form onSubmit={handleSubmit} className="space-y-6 bg-card border border-border rounded-xl p-6 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Tarih & Saat */}
-                    <div className="form-group">
-                        <label className="form-label">Tarih *</label>
-                        <input
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Tarih</label>
+                        <Input
                             type="date"
-                            className="form-input"
-                            required
                             value={formData.tarih}
                             onChange={(e) => setFormData({ ...formData, tarih: e.target.value })}
+                            required
                         />
                     </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Saat</label>
-                        <input
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Saat</label>
+                        <Input
                             type="time"
-                            className="form-input"
                             value={formData.saat}
                             onChange={(e) => setFormData({ ...formData, saat: e.target.value })}
                         />
                     </div>
 
                     {/* Tekne */}
-                    <div className="form-group">
-                        <label className="form-label">Tekne Adı *</label>
-                        <input
-                            type="text"
-                            className="form-input"
-                            required
-                            placeholder="Örn: S/Y BELLA BLUE"
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Tekne Adı</label>
+                        <Input
                             value={formData.tekneAdi}
                             onChange={(e) => setFormData({ ...formData, tekneAdi: e.target.value })}
+                            required
+                            placeholder="Örn: S/Y BELLA BLUE"
                         />
                     </div>
 
                     {/* İş Tipi */}
-                    <div className="form-group">
-                        <label className="form-label">İş Tipi *</label>
+                    <div className="space-y-2">
+                        <label htmlFor="isTuru" className="text-sm font-medium">İş Tipi</label>
                         <select
-                            className="form-select"
-                            required
+                            id="isTuru"
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={formData.isTuru}
                             onChange={(e) => setFormData({ ...formData, isTuru: e.target.value as IsTuru })}
+                            aria-label="İş Tipi Seçimi"
                         >
                             {Object.entries(IS_TURU_CONFIG).map(([key, config]) => (
                                 <option key={key} value={key}>
@@ -118,59 +128,53 @@ export default function YeniServisPage() {
                     </div>
 
                     {/* Konum */}
-                    <div className="form-group">
-                        <label className="form-label">Adres *</label>
-                        <input
-                            type="text"
-                            className="form-input"
-                            required
-                            placeholder="Örn: NETSEL, YATMARİN, BOZBURUN"
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Adres</label>
+                        <Input
                             value={formData.adres}
                             onChange={(e) => setFormData({ ...formData, adres: e.target.value })}
+                            required
+                            placeholder="Örn: NETSEL, YATMARİN, BOZBURUN"
                         />
                     </div>
 
-                    <div className="form-group">
-                        <label className="form-label">Yer (Detay)</label>
-                        <input
-                            type="text"
-                            className="form-input"
-                            placeholder="Örn: L Pontonu, Kara, DSV Marina"
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Yer (Detay)</label>
+                        <Input
                             value={formData.yer}
                             onChange={(e) => setFormData({ ...formData, yer: e.target.value })}
+                            placeholder="Örn: L Pontonu, Kara, DSV Marina"
                         />
                     </div>
 
                     {/* İletişim */}
-                    <div className="form-group">
-                        <label className="form-label">İrtibat Kişi</label>
-                        <input
-                            type="text"
-                            className="form-input"
-                            placeholder="Kaptan / Yetkili adı"
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">İrtibat Kişi</label>
+                        <Input
                             value={formData.irtibatKisi}
                             onChange={(e) => setFormData({ ...formData, irtibatKisi: e.target.value })}
+                            placeholder="Kaptan / Yetkili adı"
                         />
                     </div>
 
-                    <div className="form-group">
-                        <label className="form-label">Telefon</label>
-                        <input
-                            type="tel"
-                            className="form-input"
-                            placeholder="+90 5XX XXX XX XX"
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Telefon</label>
+                        <Input
                             value={formData.telefon}
                             onChange={(e) => setFormData({ ...formData, telefon: e.target.value })}
+                            placeholder="+90 5XX XXX XX XX"
                         />
                     </div>
 
                     {/* Personel Atama */}
-                    <div className="form-group">
-                        <label className="form-label">Sorumlu Personel <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}>(Opsiyonel)</span></label>
+                    <div className="space-y-2">
+                        <label htmlFor="sorumluId" className="text-sm font-medium">Sorumlu Personel <span className="text-muted-foreground font-normal">(Opsiyonel)</span></label>
                         <select
-                            className="form-select"
+                            id="sorumluId"
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={formData.sorumluId}
                             onChange={(e) => setFormData({ ...formData, sorumluId: e.target.value })}
+                            aria-label="Sorumlu Personel Seçimi"
                         >
                             <option value="">Sonra atanacak...</option>
                             {personnel.map(p => (
@@ -179,12 +183,14 @@ export default function YeniServisPage() {
                         </select>
                     </div>
 
-                    <div className="form-group">
-                        <label className="form-label">Destek Personel</label>
+                    <div className="space-y-2">
+                        <label htmlFor="destekId" className="text-sm font-medium">Destek Personel</label>
                         <select
-                            className="form-select"
+                            id="destekId"
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={formData.destekId}
                             onChange={(e) => setFormData({ ...formData, destekId: e.target.value })}
+                            aria-label="Destek Personel Seçimi"
                         >
                             <option value="">Yok</option>
                             {personnel.filter(p => p.id !== formData.sorumluId).map(p => (
@@ -192,67 +198,46 @@ export default function YeniServisPage() {
                             ))}
                         </select>
                     </div>
-                </div>
 
-                {/* Servis Açıklaması */}
-                <div className="form-group" style={{ marginTop: 'var(--space-lg)' }}>
-                    <label className="form-label">Servis Açıklaması *</label>
-                    <textarea
-                        className="form-textarea"
-                        required
-                        rows={4}
-                        placeholder="Yapılacak işin detaylı açıklaması..."
-                        value={formData.servisAciklamasi}
-                        onChange={(e) => setFormData({ ...formData, servisAciklamasi: e.target.value })}
-                    />
-                </div>
+                    {/* Durum */}
+                    <div className="space-y-2 col-span-full">
+                        <label htmlFor="durum" className="text-sm font-medium">Durum</label>
+                        <select
+                            id="durum"
+                            className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            value={formData.durum}
+                            onChange={(e) => setFormData({ ...formData, durum: e.target.value as ServisDurumu })}
+                            aria-label="Durum Seçimi"
+                        >
+                            {Object.entries(DURUM_CONFIG).map(([key, config]) => (
+                                <option key={key} value={key}>
+                                    {config.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-                {/* Durum */}
-                <div className="form-group" style={{ marginTop: 'var(--space-md)' }}>
-                    <label className="form-label">Başlangıç Durumu</label>
-                    <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
-                        {Object.entries(DURUM_CONFIG).map(([key, config]) => (
-                            <button
-                                key={key}
-                                type="button"
-                                onClick={() => setFormData({ ...formData, durum: key as ServisDurumu })}
-                                style={{
-                                    padding: 'var(--space-sm) var(--space-md)',
-                                    borderRadius: 'var(--radius-md)',
-                                    border: formData.durum === key ? `2px solid ${config.color}` : '1px solid var(--color-border)',
-                                    background: formData.durum === key ? config.bgColor : 'white',
-                                    color: config.color,
-                                    cursor: 'pointer',
-                                    fontSize: '0.85rem',
-                                }}
-                            >
-                                {config.icon} {config.label}
-                            </button>
-                        ))}
+                    {/* Servis Açıklaması */}
+                    <div className="space-y-2 col-span-full">
+                        <label className="text-sm font-medium">Servis Açıklaması</label>
+                        <textarea
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            required
+                            rows={4}
+                            placeholder="Yapılacak işin detaylı açıklaması..."
+                            value={formData.servisAciklamasi}
+                            onChange={(e) => setFormData({ ...formData, servisAciklamasi: e.target.value })}
+                        />
                     </div>
                 </div>
 
-                {/* Submit */}
-                <div style={{
-                    display: 'flex',
-                    gap: 'var(--space-md)',
-                    marginTop: 'var(--space-xl)',
-                    justifyContent: 'flex-end',
-                }}>
-                    <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => router.back()}
-                    >
+                <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                    <Button type="button" variant="outline" onClick={() => router.back()}>
                         İptal
-                    </button>
-                    <button
-                        type="submit"
-                        className="btn btn-primary"
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? '⏳ Kaydediliyor...' : '✓ Servisi Kaydet'}
-                    </button>
+                    </Button>
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? 'Kaydediliyor...' : '✓ Servisi Oluştur'}
+                    </Button>
                 </div>
             </form>
         </div>

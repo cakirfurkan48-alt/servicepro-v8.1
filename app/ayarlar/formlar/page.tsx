@@ -341,9 +341,7 @@ export default function FormBuilderPage() {
                         <Button onClick={handleSave}>
                             {editingField ? '💾 Güncelle' : '➕ Ekle'}
                         </Button>
-                        <DrawerClose asChild>
-                            <Button variant="secondary">İptal</Button>
-                        </DrawerClose>
+                        <Button variant="secondary" onClick={() => setDrawerOpen(false)}>İptal</Button>
                     </DrawerFooter>
                 </DrawerContent>
             </Drawer>

@@ -9,27 +9,27 @@ const mockServices: Service[] = [
     {
         id: '1', tarih: '2026-01-15', saat: '09:30', tekneAdi: 'S/Y BELLA BLUE',
         adres: 'NETSEL', yer: 'L Pontonu', servisAciklamasi: 'Motor Rutin Bakım',
-        isTuru: 'paket', durum: 'DEVAM_EDIYOR', atananPersonel: [],
+        isTuru: 'paket', durum: 'DEVAM EDİYOR', atananPersonel: [],
     },
     {
         id: '2', tarih: '2026-01-15', saat: '11:00', tekneAdi: 'M/V ARIEL',
         adres: 'YATMARİN', yer: 'Kara', servisAciklamasi: 'Seakeeper Kontrol',
-        isTuru: 'ariza', durum: 'DEVAM_EDIYOR', atananPersonel: [],
+        isTuru: 'ariza', durum: 'DEVAM EDİYOR', atananPersonel: [],
     },
     {
         id: '3', tarih: '2026-01-15', saat: '14:00', tekneAdi: 'CAT. HELIOS',
         adres: 'BOZBURUN', yer: 'DSV', servisAciklamasi: 'Pasarella Montajı',
-        isTuru: 'proje', durum: 'DEVAM_EDIYOR', atananPersonel: [],
+        isTuru: 'proje', durum: 'DEVAM EDİYOR', atananPersonel: [],
     },
     {
         id: '4', tarih: '2026-01-14', tekneAdi: 'M/V PACE',
         adres: 'GÖCEK', yer: 'D-Marin', servisAciklamasi: 'Jeneratör',
-        isTuru: 'ariza', durum: 'PARCA_BEKLIYOR', atananPersonel: [],
+        isTuru: 'ariza', durum: 'PARÇA BEKLİYOR', atananPersonel: [],
     },
     {
         id: '5', tarih: '2026-01-13', tekneAdi: 'S/Y DAISY',
         adres: 'NETSEL', yer: 'Atölye', servisAciklamasi: 'Kuyruk Bakımı',
-        isTuru: 'paket', durum: 'RAPOR_BEKLIYOR', atananPersonel: [],
+        isTuru: 'paket', durum: 'RAPOR BEKLİYOR', atananPersonel: [],
     },
 ];
 

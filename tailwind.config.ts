@@ -6,58 +6,52 @@ const config: Config = {
         './pages/**/*.{js,ts,jsx,tsx,mdx}',
         './components/**/*.{js,ts,jsx,tsx,mdx}',
         './app/**/*.{js,ts,jsx,tsx,mdx}',
+        './lib/**/*.{js,ts,jsx,tsx,mdx}',
     ],
     theme: {
         extend: {
+            fontFamily: {
+                sans: ['var(--font-geist-sans)'],
+                mono: ['var(--font-geist-mono)'],
+            },
             colors: {
-                // shadcn/ui compatible CSS variable colors
-                border: 'hsl(var(--border))',
-                input: 'hsl(var(--input))',
-                ring: 'hsl(var(--ring))',
-                background: 'hsl(var(--background))',
-                foreground: 'hsl(var(--foreground))',
+                border: "hsl(var(--border))",
+                input: "hsl(var(--input))",
+                ring: "hsl(var(--ring))",
+                background: "hsl(var(--background))",
+                foreground: "hsl(var(--foreground))",
                 primary: {
-                    DEFAULT: 'hsl(var(--primary))',
-                    foreground: 'hsl(var(--primary-foreground))',
+                    DEFAULT: "hsl(var(--primary))",
+                    foreground: "hsl(var(--primary-foreground))",
                 },
                 secondary: {
-                    DEFAULT: 'hsl(var(--secondary))',
-                    foreground: 'hsl(var(--secondary-foreground))',
+                    DEFAULT: "hsl(var(--secondary))",
+                    foreground: "hsl(var(--secondary-foreground))",
                 },
                 destructive: {
-                    DEFAULT: 'hsl(var(--destructive))',
-                    foreground: 'hsl(var(--destructive-foreground))',
+                    DEFAULT: "hsl(var(--destructive))",
+                    foreground: "hsl(var(--destructive-foreground))",
                 },
                 muted: {
-                    DEFAULT: 'hsl(var(--muted))',
-                    foreground: 'hsl(var(--muted-foreground))',
+                    DEFAULT: "hsl(var(--muted))",
+                    foreground: "hsl(var(--muted-foreground))",
                 },
                 accent: {
-                    DEFAULT: 'hsl(var(--accent))',
-                    foreground: 'hsl(var(--accent-foreground))',
+                    DEFAULT: "hsl(var(--accent))",
+                    foreground: "hsl(var(--accent-foreground))",
                 },
                 popover: {
-                    DEFAULT: 'hsl(var(--popover))',
-                    foreground: 'hsl(var(--popover-foreground))',
+                    DEFAULT: "hsl(var(--popover))",
+                    foreground: "hsl(var(--popover-foreground))",
                 },
                 card: {
-                    DEFAULT: 'hsl(var(--card))',
-                    foreground: 'hsl(var(--card-foreground))',
+                    DEFAULT: "hsl(var(--card))",
+                    foreground: "hsl(var(--card-foreground))",
                 },
-                // Marlin Status Colors
+                // Marlin Status Colors (Preserved)
                 status: {
-                    planlandi: '#e2f0d9',
-                    devam: '#d9ead3',
-                    parca: '#cfe2f3',
-                    onay: '#bdd7ee',
-                    rapor: '#9dc3e6',
-                    tamamlandi: '#ead1dc',
-                    kesif: '#e6e0f8',
-                    iptal: '#e5e7eb',
+                    'yatmarin-other': '#dbeafe',
                 },
-                // Yatmarin Highlight
-                yatmarin: '#fef3c7',
-                'yatmarin-other': '#dbeafe',
             },
             borderRadius: {
                 lg: 'var(--radius)',
@@ -67,5 +61,5 @@ const config: Config = {
         },
     },
     plugins: [],
-}
-export default config
+};
+export default config;

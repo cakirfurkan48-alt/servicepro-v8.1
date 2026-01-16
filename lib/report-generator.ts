@@ -107,11 +107,11 @@ export function generateGelecekHaftaRaporu(
 // Devam eden işleri filtrele
 export function getDevamEdenler(servisler: Service[]): Service[] {
     const devamDurumlari: ServisDurumu[] = [
-        'PARCA_BEKLIYOR',
-        'MUSTERI_ONAY_BEKLIYOR',
-        'RAPOR_BEKLIYOR',
-        'DEVAM_EDIYOR',
-        'RANDEVU_VERILDI',
+        'PARÇA BEKLİYOR',
+        'ONAY BEKLİYOR',
+        'RAPOR BEKLİYOR',
+        'DEVAM EDİYOR',
+        'PLANLANDI-RANDEVU',
     ];
 
     return servisler.filter(s => devamDurumlari.includes(s.durum));

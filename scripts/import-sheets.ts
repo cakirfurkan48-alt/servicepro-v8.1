@@ -1,18 +1,18 @@
 /**
- * Google Sheets Data Import Script
+ * Google Sheets Data Import Script (Enhanced)
  * 
  * Bu script, Google Sheets'teki servis verilerini ServicePRO veritabanına aktarır.
  * 
- * Kullanım:
- *   npx ts-node scripts/import-sheets.ts
- * 
- * Gereksinimler:
- *   1. .env dosyasında GOOGLE_SHEETS_ID tanımlı olmalı
- *   2. Google APIs erişim ayarları yapılmış olmalı
+ * Kurallar (Sprint 3):
+ *   1. Status: normalizeStatus() kullanılarak 8 kanonik değere maplenir.
+ *   2. Location: isYatmarin() kullanılarak belirlenir.
+ *   3. Closure: Kapanış tarihi yoksa (CSV'de yok), completedAt = null ve incompleteClosure = true flag set edilir.
+ *   4. Hedef: Prisma DB
  */
 
 import { PrismaClient } from '@prisma/client';
-import { normalizeStatus, STATUS } from '../lib/status';
+import { normalizeStatus, STATUS, isCompletedStatus, StatusValue } from '../lib/status';
+import { isYatmarin } from '../lib/yatmarin';
 
 const prisma = new PrismaClient();
 
@@ -32,19 +32,11 @@ interface SheetRow {
 // Parse DD.MM.YYYY date format
 function parseDate(dateStr: string): Date | null {
     if (!dateStr) return null;
-
     const parts = dateStr.split('.');
     if (parts.length !== 3) return null;
-
     const [day, month, year] = parts;
     const date = new Date(`${year}-${month}-${day}`);
-
     return isNaN(date.getTime()) ? null : date;
-}
-
-// Normalize status from sheets to new Marlin standard
-function mapStatus(sheetStatus: string): string {
-    return normalizeStatus(sheetStatus);
 }
 
 // Find or create boat by name
@@ -59,7 +51,6 @@ async function findOrCreateBoat(name: string) {
         });
         console.log(`  ✅ Yeni tekne oluşturuldu: ${name}`);
     }
-
     return boat;
 }
 
@@ -67,83 +58,79 @@ async function findOrCreateBoat(name: string) {
 async function generateServiceCode(): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `SRV-${year}-`;
-
     const lastService = await prisma.service.findFirst({
         where: { code: { startsWith: prefix } },
         orderBy: { code: 'desc' }
     });
-
     let nextNumber = 1;
     if (lastService) {
         const lastNumber = parseInt(lastService.code.split('-')[2], 10);
         nextNumber = lastNumber + 1;
     }
-
     return `${prefix}${nextNumber.toString().padStart(4, '0')}`;
 }
 
-// Find default location and status configs
-async function getDefaultConfigs() {
-    // Get or create default location
-    let defaultLocation = await prisma.configLocation.findFirst({
-        where: { key: 'DIS_SERVIS' }
-    });
+// Utility to get config IDs
+// Uses a cache-like pattern (fetches once per run usually, but here we check per row for simplicity or fetch all first)
+// Better to fetch all configs first.
 
-    if (!defaultLocation) {
-        defaultLocation = await prisma.configLocation.create({
-            data: {
-                key: 'DIS_SERVIS',
-                label: 'Dış Servis',
-                color: '#94a3b8',
-                sortOrder: 99
-            }
-        });
-    }
+async function getConfigMap() {
+    const locations = await prisma.configLocation.findMany();
+    const statuses = await prisma.configStatus.findMany();
+    const jobTypes = await prisma.configJobType.findMany();
 
-    // Get or create default status
-    let defaultStatus = await prisma.configStatus.findFirst({
-        where: { key: 'PLANLANDI_RANDEVU' }
-    });
+    // Helper to find ID
+    const findLoc = (key: string) => locations.find(l => l.key === key)?.id;
+    const findStat = (key: string) => statuses.find(s => s.key === key)?.id;
+    const findJob = (key: string) => jobTypes.find(j => j.key === key)?.id;
 
-    if (!defaultStatus) {
-        defaultStatus = await prisma.configStatus.create({
-            data: {
-                key: 'PLANLANDI_RANDEVU',
-                label: 'Planlandı/Randevu',
-                color: '#86efac',
-                sortOrder: 1
-            }
-        });
-    }
+    // Ensure default fallback exists (create if missing logic removed for brevity, assuming seeded DB or create on fly if really needed)
+    // For this script, we assume DB is seeded with canonicals.
 
-    // Get or create default job type
-    let defaultJobType = await prisma.configJobType.findFirst({
-        where: { key: 'GENEL' }
-    });
-
-    if (!defaultJobType) {
-        defaultJobType = await prisma.configJobType.create({
-            data: {
-                key: 'GENEL',
-                label: 'Genel Servis',
-                multiplier: 1.0,
-                sortOrder: 1
-            }
-        });
-    }
-
-    return { defaultLocation, defaultStatus, defaultJobType };
+    return { locations, statuses, jobTypes, findLoc, findStat, findJob };
 }
 
 // Import a single row
-async function importRow(row: SheetRow, configs: Awaited<ReturnType<typeof getDefaultConfigs>>) {
-    const { defaultLocation, defaultStatus, defaultJobType } = configs;
+async function importRow(row: SheetRow, configs: Awaited<ReturnType<typeof getConfigMap>>) {
+    const { findLoc, findStat, findJob } = configs;
 
-    // Find or create boat
+    // 1. Status Mapping
+    const normalizedStatus = normalizeStatus(row.durum) as StatusValue;
+    const statusId = findStat(normalizedStatus);
+
+    if (!statusId) {
+        console.warn(`  ⚠️ Status not found in DB: ${normalizedStatus} (original: ${row.durum}). Skipping row.`);
+        return;
+    }
+
+    // 2. Location Mapping
+    const isYat = isYatmarin(row.adres, row.yer);
+    const locationKey = isYat ? 'YATMARIN' : 'DIS_SERVIS';
+    const locationId = findLoc(locationKey) || findLoc('DIS_SERVIS'); // Fallback
+
+    if (!locationId) {
+        console.warn(`  ⚠️ Location not found in DB: ${locationKey}. Skipping row.`);
+        return;
+    }
+
+    // 3. Job Type (Default to GENEL/Paket/Ariza logic? Using simple fallback for now)
+    const jobTypeId = findJob('ariza') || findJob('paket') || configs.jobTypes[0]?.id;
+
+    // 4. Boat
     const boat = await findOrCreateBoat(row.tekneAdi);
 
-    // Parse date
+    // 5. Date
     const scheduledDate = parseDate(row.tarih) || new Date();
+
+    // 6. Closure Logic
+    let completedAt = null;
+    let customFields: any = {};
+
+    if (isCompletedStatus(normalizedStatus)) {
+        // Source implies completion but has no date -> Incomplete Closure
+        customFields.incompleteClosure = true;
+        // active statuses: closedAt should remain null
+    }
 
     // Generate service code
     const code = await generateServiceCode();
@@ -154,31 +141,31 @@ async function importRow(row: SheetRow, configs: Awaited<ReturnType<typeof getDe
             code,
             boatId: boat.id,
             boatName: row.tekneAdi,
-            locationId: defaultLocation.id,
-            statusId: defaultStatus.id,
-            jobTypeId: defaultJobType.id,
+            locationId,
+            statusId,
+            jobTypeId: jobTypeId!,
             description: row.servisAciklamasi || 'İçe aktarılan servis',
             address: row.adres,
             contactPerson: row.irtibatKisi,
             contactPhone: row.telefon,
             scheduledDate,
             scheduledTime: row.saat,
+            completedAt: null, // Always null as per user request for imported data without explicit date
+            customFields: customFields
         }
     });
 
-    console.log(`  📦 Servis oluşturuldu: ${code} - ${row.tekneAdi}`);
+    console.log(`  📦 Servis: ${code} | ${row.tekneAdi} | ${normalizedStatus} | ${isYat ? 'YAT' : 'DIS'} ${customFields.incompleteClosure ? '[INCOMPLETE_CLOSURE]' : ''}`);
     return service;
 }
 
 // Main import function
 export async function importFromCSV(csvContent: string) {
-    console.log('🚀 Google Sheets import başlatılıyor...\n');
+    console.log('🚀 Google Sheets import (Sprint 3 Enhanced) başlatılıyor...\n');
 
-    // Parse CSV (simple implementation)
     const lines = csvContent.split('\n');
     const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
 
-    // Map header names to expected fields
     const headerMap: Record<string, keyof SheetRow> = {
         'tarih': 'tarih',
         'saat': 'saat',
@@ -194,12 +181,16 @@ export async function importFromCSV(csvContent: string) {
         'durum': 'durum',
     };
 
-    // Get default configs
-    const configs = await getDefaultConfigs();
+    const configs = await getConfigMap();
+    if (configs.statuses.length === 0) {
+        console.error("❌ Veritabanında STATUS konfigürasyonu bulunamadı. Lütfen önce seed çalıştırın.");
+        return;
+    }
 
     let imported = 0;
     let skipped = 0;
 
+    // Start from 1 to skip header
     for (let i = 1; i < lines.length; i++) {
         const line = lines[i];
         if (!line.trim()) continue;
@@ -208,29 +199,21 @@ export async function importFromCSV(csvContent: string) {
         const values: string[] = [];
         let current = '';
         let inQuotes = false;
-
         for (const char of line) {
-            if (char === '"') {
-                inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-                values.push(current.trim());
-                current = '';
-            } else {
-                current += char;
-            }
+            if (char === '"') inQuotes = !inQuotes;
+            else if (char === ',' && !inQuotes) { values.push(current.trim()); current = ''; }
+            else current += char;
         }
         values.push(current.trim());
 
-        // Build row object
         const row: Partial<SheetRow> = {};
         headers.forEach((header, index) => {
             const field = headerMap[header];
             if (field && values[index]) {
-                (row as any)[field] = values[index];
+                (row as any)[field] = values[index].replace(/^"|"$/g, ''); // Remove surrounding quotes
             }
         });
 
-        // Skip if missing required fields
         if (!row.tekneAdi || !row.tarih) {
             skipped++;
             continue;
@@ -252,9 +235,8 @@ export async function importFromCSV(csvContent: string) {
 
 // Run if executed directly
 if (require.main === module) {
-    // For direct execution, you would fetch from Google Sheets
-    // This is a placeholder - real implementation would use googleapis
     console.log('Bu script doğrudan çalıştırılamaz.');
     console.log('CSV içeriğini importFromCSV() fonksiyonuna gönderin.');
-    process.exit(1);
+    // In a real scenario, we might want to read a local file here for testing
+    // fs.readFile...
 }

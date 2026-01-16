@@ -179,8 +179,9 @@ export default function WorkflowBuilderPage() {
                                         ) : (
                                             <div className="flex items-center gap-2">
                                                 <div
-                                                    className="w-6 h-6 rounded border border-border"
-                                                    style={{ backgroundColor: status.color }}
+                                                    className="w-6 h-6 rounded border border-border bg-[var(--status-color)]"
+                                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                                    style={{ '--status-color': status.color } as any}
                                                 />
                                                 <span className="text-xs text-muted-foreground">{status.color}</span>
                                             </div>

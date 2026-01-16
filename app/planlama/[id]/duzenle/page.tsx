@@ -1,270 +1,136 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import {
-    IsTuru, IS_TURU_CONFIG, ServisDurumu, DURUM_CONFIG, YETKILI_LISTESI
-} from '@/types';
+import { Icon, IconName } from '@/lib/icons';
+import { fetchServiceById, updateService } from '@/lib/api';
+import { Service, ServisDurumu, DURUM_CONFIG, IS_TURU_CONFIG, IsTuru } from '@/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { toast } from 'sonner';
 
-// Mock personnel
-const personnel = [
-    { id: '1', ad: 'Ali Can Yaylalı', unvan: 'cirak' },
-    { id: '2', ad: 'Alican Yaylalı', unvan: 'usta' },
-    { id: '3', ad: 'Batuhan Çoban', unvan: 'cirak' },
-    { id: '4', ad: 'Cüneyt Yaylalı', unvan: 'usta' },
-    { id: '5', ad: 'İbrahim Yayalık', unvan: 'usta' },
-    { id: '6', ad: 'Mehmet Güven', unvan: 'usta' },
-    { id: '7', ad: 'Sercan Sarız', unvan: 'usta' },
-];
-
-// Mock service data
-const mockService = {
-    id: '2735',
-    tarih: '2026-01-14',
-    saat: '09:30',
-    tekneAdi: 'S/Y DAISY DAISY',
-    adres: 'NETSEL',
-    yer: 'ALBATROS',
-    servisAciklamasi: 'YANMAR SD60 KÖRÜK + ÜST GRUP SERVİSİ',
-    irtibatKisi: 'EMRE ÖZKUL',
-    telefon: '0 533 276 65 99',
-    isTuru: 'paket' as IsTuru,
-    durum: 'DEVAM_EDIYOR' as ServisDurumu,
-    sorumluId: '6',
-    destekId: '',
-    ofisYetkilisi: 'Furkan Çakır',
-};
-
-export default function ServisDuzenlePage() {
-    const router = useRouter();
+export default function EditServicePage() {
     const params = useParams();
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const router = useRouter();
+    const id = params.id as string;
 
-    const [formData, setFormData] = useState({
-        ...mockService,
-    });
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [formData, setFormData] = useState<Partial<Service>>({});
+
+    useEffect(() => {
+        loadService();
+    }, [id]);
+
+    const loadService = async () => {
+        try {
+            const data = await fetchServiceById(id);
+            if (data) {
+                setFormData(data);
+            } else {
+                toast.error('Servis bulunamadı');
+                router.push('/planlama');
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error('Servis yüklenirken hata oluştu');
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsSubmitting(true);
-
-        // TODO: API call
-        console.log('Updated form data:', formData);
-
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        router.push('/planlama');
+        setIsSaving(true);
+        try {
+            await updateService(id, formData);
+            toast.success('Servis güncellendi');
+            router.push(`/planlama/${id}`);
+        } catch (error) {
+            console.error(error);
+            toast.error('Güncelleme başarısız');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
+    if (isLoading) return <div className="p-8 text-center">Yükleniyor...</div>;
+
     return (
-        <div className="animate-fade-in">
-            <header className="page-header">
-                <h1 className="page-title">✏️ Servis Düzenle</h1>
-                <span style={{
-                    padding: 'var(--space-sm) var(--space-md)',
-                    background: DURUM_CONFIG[formData.durum].bgColor,
-                    color: DURUM_CONFIG[formData.durum].color,
-                    borderRadius: 'var(--radius-md)',
-                    fontWeight: 600,
-                }}>
-                    {DURUM_CONFIG[formData.durum].icon} {DURUM_CONFIG[formData.durum].label}
-                </span>
+        <div className="max-w-3xl mx-auto py-8 px-4 animate-fade-in">
+            <header className="mb-8 flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold flex items-center gap-2">
+                        <span className="text-2xl">✏️</span> Servis Düzenle
+                    </h1>
+                    <p className="text-muted-foreground mt-1">{formData.tekneAdi}</p>
+                </div>
             </header>
 
-            <form onSubmit={handleSubmit} className="card" style={{ maxWidth: '900px' }}>
-                <div className="grid grid-cols-2" style={{ gap: 'var(--space-lg)' }}>
-                    {/* Tarih & Saat */}
-                    <div className="form-group">
-                        <label className="form-label">Tarih *</label>
-                        <input
+            <form onSubmit={handleSubmit} className="space-y-6 bg-card border border-border rounded-xl p-6 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Tarih</label>
+                        <Input
                             type="date"
-                            className="form-input"
+                            value={formData.tarih || ''}
+                            onChange={e => setFormData({ ...formData, tarih: e.target.value })}
                             required
-                            value={formData.tarih}
-                            onChange={(e) => setFormData({ ...formData, tarih: e.target.value })}
                         />
                     </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Saat</label>
-                        <input
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Saat</label>
+                        <Input
                             type="time"
-                            className="form-input"
-                            value={formData.saat}
-                            onChange={(e) => setFormData({ ...formData, saat: e.target.value })}
+                            value={formData.saat || ''}
+                            onChange={e => setFormData({ ...formData, saat: e.target.value })}
                         />
                     </div>
 
-                    {/* Tekne */}
-                    <div className="form-group">
-                        <label className="form-label">Tekne Adı *</label>
-                        <input
-                            type="text"
-                            className="form-input"
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Tekne Adı</label>
+                        <Input
+                            value={formData.tekneAdi || ''}
+                            onChange={e => setFormData({ ...formData, tekneAdi: e.target.value })}
                             required
-                            value={formData.tekneAdi}
-                            onChange={(e) => setFormData({ ...formData, tekneAdi: e.target.value })}
                         />
                     </div>
 
-                    {/* İş Tipi */}
-                    <div className="form-group">
-                        <label className="form-label">İş Tipi *</label>
-                        <select
-                            className="form-select"
-                            required
-                            value={formData.isTuru}
-                            onChange={(e) => setFormData({ ...formData, isTuru: e.target.value as IsTuru })}
-                        >
-                            {Object.entries(IS_TURU_CONFIG).map(([key, config]) => (
-                                <option key={key} value={key}>
-                                    {config.label} (×{config.carpan})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Konum */}
-                    <div className="form-group">
-                        <label className="form-label">Adres *</label>
-                        <input
-                            type="text"
-                            className="form-input"
-                            required
-                            value={formData.adres}
-                            onChange={(e) => setFormData({ ...formData, adres: e.target.value })}
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Yer (Detay)</label>
-                        <input
-                            type="text"
-                            className="form-input"
-                            value={formData.yer}
-                            onChange={(e) => setFormData({ ...formData, yer: e.target.value })}
-                        />
-                    </div>
-
-                    {/* İletişim */}
-                    <div className="form-group">
-                        <label className="form-label">İrtibat Kişi</label>
-                        <input
-                            type="text"
-                            className="form-input"
-                            value={formData.irtibatKisi}
-                            onChange={(e) => setFormData({ ...formData, irtibatKisi: e.target.value })}
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Telefon</label>
-                        <input
-                            type="tel"
-                            className="form-input"
-                            value={formData.telefon}
-                            onChange={(e) => setFormData({ ...formData, telefon: e.target.value })}
-                        />
-                    </div>
-
-                    {/* Personel Atama */}
-                    <div className="form-group">
-                        <label className="form-label">Sorumlu Personel *</label>
-                        <select
-                            className="form-select"
-                            required
-                            value={formData.sorumluId}
-                            onChange={(e) => setFormData({ ...formData, sorumluId: e.target.value })}
-                        >
-                            <option value="">Seçiniz...</option>
-                            {personnel.map(p => (
-                                <option key={p.id} value={p.id}>
-                                    {p.ad} ({p.unvan})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="form-group">
-                        <label className="form-label">Destek Personel</label>
-                        <select
-                            className="form-select"
-                            value={formData.destekId}
-                            onChange={(e) => setFormData({ ...formData, destekId: e.target.value })}
-                        >
-                            <option value="">Yok</option>
-                            {personnel.filter(p => p.id !== formData.sorumluId).map(p => (
-                                <option key={p.id} value={p.id}>
-                                    {p.ad} ({p.unvan})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Ofis Yetkilisi */}
-                    <div className="form-group">
-                        <label className="form-label">Ofis Yetkilisi (Takip Eden)</label>
-                        <select
-                            className="form-select"
-                            value={formData.ofisYetkilisi}
-                            onChange={(e) => setFormData({ ...formData, ofisYetkilisi: e.target.value })}
-                        >
-                            <option value="">Seçiniz...</option>
-                            {YETKILI_LISTESI.map(y => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Durum */}
-                    <div className="form-group">
-                        <label className="form-label">Durum</label>
-                        <select
-                            className="form-select"
+                    <div className="space-y-2">
+                        <label htmlFor="durum" className="text-sm font-medium">Durum</label>
+                        <Select
+                            id="durum"
                             value={formData.durum}
-                            onChange={(e) => setFormData({ ...formData, durum: e.target.value as ServisDurumu })}
+                            onChange={e => setFormData({ ...formData, durum: e.target.value as any })}
+                            aria-label="Durum Seçimi"
                         >
-                            {Object.entries(DURUM_CONFIG).map(([key, config]) => (
-                                <option key={key} value={key}>
-                                    {config.icon} {config.label}
-                                </option>
+                            {Object.entries(DURUM_CONFIG).map(([key, conf]) => (
+                                <option key={key} value={key}>{conf.label}</option>
                             ))}
-                        </select>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2 col-span-full">
+                        <label htmlFor="servisAciklamasi" className="text-sm font-medium">Açıklama</label>
+                        <textarea
+                            id="servisAciklamasi"
+                            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            rows={4}
+                            value={formData.servisAciklamasi || ''}
+                            onChange={e => setFormData({ ...formData, servisAciklamasi: e.target.value })}
+                            aria-label="Servis Açıklaması"
+                        />
                     </div>
                 </div>
 
-                {/* Servis Açıklaması */}
-                <div className="form-group" style={{ marginTop: 'var(--space-lg)' }}>
-                    <label className="form-label">Servis Açıklaması *</label>
-                    <textarea
-                        className="form-textarea"
-                        required
-                        rows={4}
-                        value={formData.servisAciklamasi}
-                        onChange={(e) => setFormData({ ...formData, servisAciklamasi: e.target.value })}
-                    />
-                </div>
-
-                {/* Submit */}
-                <div style={{
-                    display: 'flex',
-                    gap: 'var(--space-md)',
-                    marginTop: 'var(--space-xl)',
-                    justifyContent: 'flex-end',
-                }}>
-                    <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => router.back()}
-                    >
+                <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                    <Button type="button" variant="outline" onClick={() => router.back()}>
                         İptal
-                    </button>
-                    <button
-                        type="submit"
-                        className="btn btn-primary"
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? '⏳ Kaydediliyor...' : '✓ Değişiklikleri Kaydet'}
-                    </button>
+                    </Button>
+                    <Button type="submit" disabled={isSaving}>
+                        {isSaving ? 'Kaydediliyor...' : 'Kaydet'}
+                    </Button>
                 </div>
             </form>
         </div>
