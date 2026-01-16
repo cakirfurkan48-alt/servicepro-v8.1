@@ -122,9 +122,22 @@ export default function CompletionSidebar({
     const isValidTeam = sorumlular.length + destekler.length >= 1;
 
     const toggleSecim = (personnelId: string) => {
-        setPersonelSecimleri(prev => prev.map(p =>
-            p.personnelId === personnelId ? { ...p, secili: !p.secili } : p
-        ));
+        setPersonelSecimleri(prev => {
+            const updated = prev.map(p =>
+                p.personnelId === personnelId ? { ...p, secili: !p.secili } : p
+            );
+
+            // HOTFIX-2: Auto-set status to TAMAMLANDI when first team member is selected
+            const newSeciliCount = updated.filter(p => p.secili).length;
+            const previousSeciliCount = prev.filter(p => p.secili).length;
+
+            // If going from 0 to 1+ selected, auto-set to TAMAMLANDI
+            if (previousSeciliCount === 0 && newSeciliCount > 0) {
+                setSelectedStatus(STATUS.TAMAMLANDI);
+            }
+
+            return updated;
+        });
         setValidationError(null);
     };
 
@@ -426,11 +439,9 @@ export default function CompletionSidebar({
                     >
                         ✓ Servisi Tamamla ({seciliPersoneller.length} personel)
                     </Button>
-                    <DrawerClose asChild>
-                        <Button variant="secondary" className="w-full">
-                            İptal
-                        </Button>
-                    </DrawerClose>
+                    <Button variant="secondary" className="w-full" onClick={onClose}>
+                        İptal
+                    </Button>
                 </DrawerFooter>
             </DrawerContent>
         </Drawer>

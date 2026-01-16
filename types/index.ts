@@ -115,6 +115,11 @@ export interface KapanisRaporu {
     aciklama: string;
     raporlayanPersonel: string;
     raporTarihi: string;
+    // Closure metadata (added in Sprint 2 hotfix)
+    closedByUserEmail?: string;
+    closedByUserName?: string;
+    closedAt?: string;
+    closureId?: string;
 }
 
 export const RAPOR_GEREKSINIMLERI: Record<IsTuru, (keyof Omit<KapanisRaporu, 'aciklama' | 'raporlayanPersonel' | 'raporTarihi'>)[]> = {

@@ -38,8 +38,16 @@ export const ACTIVE_STATUSES: StatusValue[] = [
     STATUS.PARCA_BEKLIYOR,
 ];
 
-// Tamamlanmış sayılan durumlar (arşiv)
+// Tamamlanmış sayılan durumlar (puan hesaplaması için)
+// İPTAL tamamlanmış DEĞİL - performans metriklerinde sayılmaz
 export const COMPLETED_STATUSES: StatusValue[] = [
+    STATUS.TAMAMLANDI,
+    STATUS.KESIF_KONTROL,
+];
+
+// Arşiv durumları (UI filtreleme için)
+// Kapanmış tüm işler - tamamlanan + iptal
+export const ARCHIVE_STATUSES: StatusValue[] = [
     STATUS.TAMAMLANDI,
     STATUS.KESIF_KONTROL,
     STATUS.IPTAL,
@@ -58,10 +66,25 @@ export const ALL_STATUSES: StatusValue[] = [
 ];
 
 /**
- * Check if status is completed (archive)
+ * Check if status is completed (for scoring/performance metrics)
+ * İPTAL is NOT completed - it's just archived
  */
 export function isCompletedStatus(status: StatusValue): boolean {
     return COMPLETED_STATUSES.includes(status);
+}
+
+/**
+ * Check if status is archived (closed - either completed or cancelled)
+ */
+export function isArchivedStatus(status: StatusValue): boolean {
+    return ARCHIVE_STATUSES.includes(status);
+}
+
+/**
+ * Check if status is cancelled
+ */
+export function isCancelledStatus(status: StatusValue): boolean {
+    return status === STATUS.IPTAL;
 }
 
 // Durum meta verileri (label, color, icon)
@@ -71,6 +94,7 @@ export const STATUS_META: Record<StatusValue, {
     text: string;
     icon: string;
     isActive: boolean;
+    isCancelled?: boolean;
 }> = {
     [STATUS.PLANLANDI_RANDEVU]: {
         label: 'Planlandı/Randevu',
@@ -122,11 +146,12 @@ export const STATUS_META: Record<StatusValue, {
         isActive: false
     },
     [STATUS.IPTAL]: {
-        label: 'İptal',
-        bg: '#e5e7eb',
-        text: '#374151',
-        icon: '❌',
-        isActive: false
+        label: 'İptal Edildi',
+        bg: '#fecaca',
+        text: '#991b1b',
+        icon: '🚫',
+        isActive: false,
+        isCancelled: true,
     },
 };
 

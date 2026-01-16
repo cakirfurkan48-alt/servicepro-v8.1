@@ -9,7 +9,7 @@ import {
     StatusValue,
     STATUS_META,
     ACTIVE_STATUSES,
-    COMPLETED_STATUSES,
+    ARCHIVE_STATUSES,
     ALL_STATUSES
 } from '@/lib/status';
 
@@ -134,7 +134,7 @@ export default function PlanningToolbar({
                         {visibleStatuses.map((durum) => {
                             const meta = STATUS_META[durum];
                             const isSelected = selectedDurumlar.includes(durum);
-                            const isCompleted = COMPLETED_STATUSES.includes(durum);
+                            const isArchived = ARCHIVE_STATUSES.includes(durum);
 
                             return (
                                 <button
@@ -146,7 +146,7 @@ export default function PlanningToolbar({
                                             ? 'text-white'
                                             : 'bg-transparent text-muted-foreground border-border hover:border-primary/50'
                                         }
-                                        ${isCompleted && !isSelected ? 'opacity-60' : ''}
+                                        ${isArchived && !isSelected ? 'opacity-60' : ''}
                                     `}
                                     style={{
                                         backgroundColor: isSelected ? meta.bg : undefined,
