@@ -1,519 +1,246 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
+import { STATUS, STATUS_META, StatusValue } from '@/lib/status';
 
-interface WorkflowTransition {
-    id: string;
-    fromStatusKey: string;
-    toStatusKey: string;
-    allowedRoles: string[];
-    requiresNote: boolean;
-    requiresParts: boolean;
-    autoActions: any;
-    active: boolean;
-    fromStatus: { label: string; color: string };
-    toStatus: { label: string; color: string };
-}
-
-interface Status {
+interface ConfigStatus {
     id: string;
     key: string;
     label: string;
     color: string;
+    sortOrder: number;
+    active: boolean;
 }
 
-export default function WorkflowPage() {
-    const [transitions, setTransitions] = useState<WorkflowTransition[]>([]);
-    const [statuses, setStatuses] = useState<Status[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [editingTransition, setEditingTransition] = useState<WorkflowTransition | null>(null);
-    const [newTransition, setNewTransition] = useState({
-        fromStatusKey: '',
-        toStatusKey: '',
-        requiresNote: false,
-        requiresParts: false,
-    });
+// Mock data - will be replaced with API calls
+const MOCK_STATUSES: ConfigStatus[] = [
+    { id: '1', key: 'PLANLANDI_RANDEVU', label: 'Planlandı/Randevu', color: '#e2f0d9', sortOrder: 1, active: true },
+    { id: '2', key: 'DEVAM_EDIYOR', label: 'Devam Ediyor', color: '#d9ead3', sortOrder: 2, active: true },
+    { id: '3', key: 'PARCA_BEKLIYOR', label: 'Parça Bekliyor', color: '#cfe2f3', sortOrder: 3, active: true },
+    { id: '4', key: 'ONAY_BEKLIYOR', label: 'Onay Bekliyor', color: '#bdd7ee', sortOrder: 4, active: true },
+    { id: '5', key: 'RAPOR_BEKLIYOR', label: 'Rapor Bekliyor', color: '#9dc3e6', sortOrder: 5, active: true },
+    { id: '6', key: 'TAMAMLANDI', label: 'Tamamlandı', color: '#ead1dc', sortOrder: 6, active: true },
+    { id: '7', key: 'KESIF_KONTROL', label: 'Keşif/Kontrol', color: '#e6e0f8', sortOrder: 7, active: true },
+    { id: '8', key: 'IPTAL', label: 'İptal', color: '#e5e7eb', sortOrder: 8, active: true },
+];
 
-    const fetchData = async () => {
-        setLoading(true);
-        try {
-            const res = await fetch('/api/admin/workflow?active=false');
-            const data = await res.json();
-            setTransitions(data.transitions);
-            setStatuses(data.statuses);
-        } catch (err) {
-            console.error('Failed to fetch workflow:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+export default function WorkflowBuilderPage() {
+    const [statuses, setStatuses] = useState<ConfigStatus[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editForm, setEditForm] = useState({ label: '', color: '' });
 
     useEffect(() => {
-        fetchData();
+        // Simulate API call
+        setTimeout(() => {
+            setStatuses(MOCK_STATUSES);
+            setIsLoading(false);
+        }, 300);
     }, []);
 
-    const handleCreate = async () => {
-        if (!newTransition.fromStatusKey || !newTransition.toStatusKey) {
-            alert('Başlangıç ve hedef durum seçiniz');
-            return;
-        }
-
-        if (newTransition.fromStatusKey === newTransition.toStatusKey) {
-            alert('Başlangıç ve hedef durum aynı olamaz');
-            return;
-        }
-
-        try {
-            const res = await fetch('/api/admin/workflow', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newTransition),
-            });
-
-            if (res.ok) {
-                setShowAddModal(false);
-                setNewTransition({ fromStatusKey: '', toStatusKey: '', requiresNote: false, requiresParts: false });
-                fetchData();
-            } else {
-                const err = await res.json();
-                alert(err.error || 'Geçiş oluşturulamadı');
-            }
-        } catch (err) {
-            console.error('Create error:', err);
-        }
+    const handleEdit = (status: ConfigStatus) => {
+        setEditingId(status.id);
+        setEditForm({ label: status.label, color: status.color });
     };
 
-    const handleUpdate = async (transition: WorkflowTransition) => {
-        try {
-            const res = await fetch('/api/admin/workflow', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: transition.id,
-                    requiresNote: transition.requiresNote,
-                    requiresParts: transition.requiresParts,
-                    active: transition.active,
-                }),
-            });
-
-            if (res.ok) {
-                setEditingTransition(null);
-                fetchData();
-            }
-        } catch (err) {
-            console.error('Update error:', err);
-        }
+    const handleSave = async (id: string) => {
+        setStatuses(prev => prev.map(s =>
+            s.id === id ? { ...s, label: editForm.label, color: editForm.color } : s
+        ));
+        setEditingId(null);
+        // TODO: API call to save
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm('Bu geçişi silmek istediğinize emin misiniz?')) return;
-
-        try {
-            const res = await fetch(`/api/admin/workflow?id=${id}`, { method: 'DELETE' });
-            if (res.ok) fetchData();
-        } catch (err) {
-            console.error('Delete error:', err);
-        }
+    const handleToggleActive = async (id: string) => {
+        setStatuses(prev => prev.map(s =>
+            s.id === id ? { ...s, active: !s.active } : s
+        ));
+        // TODO: API call to save
     };
 
-    const handleToggleActive = async (transition: WorkflowTransition) => {
-        await handleUpdate({ ...transition, active: !transition.active });
+    const handleMoveUp = (index: number) => {
+        if (index === 0) return;
+        const newStatuses = [...statuses];
+        [newStatuses[index - 1], newStatuses[index]] = [newStatuses[index], newStatuses[index - 1]];
+        newStatuses.forEach((s, i) => s.sortOrder = i + 1);
+        setStatuses(newStatuses);
     };
 
-    // Group transitions by fromStatus for visualization
-    const groupedTransitions = statuses.map(status => ({
-        status,
-        outgoing: transitions.filter(t => t.fromStatusKey === status.key),
-    }));
+    const handleMoveDown = (index: number) => {
+        if (index === statuses.length - 1) return;
+        const newStatuses = [...statuses];
+        [newStatuses[index], newStatuses[index + 1]] = [newStatuses[index + 1], newStatuses[index]];
+        newStatuses.forEach((s, i) => s.sortOrder = i + 1);
+        setStatuses(newStatuses);
+    };
 
     return (
-        <div className="animate-fade-in">
-            <header className="page-header">
+        <div className="p-6 space-y-6">
+            {/* Header */}
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="page-title">🔄 Workflow Editor</h1>
-                    <p style={{ color: 'var(--color-text-muted)' }}>
-                        Durum geçiş kurallarını yönetin
+                    <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                        🔄 Workflow Builder
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                        Servis durumlarını ve geçiş kurallarını yönetin
                     </p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-                    ➕ Yeni Geçiş Ekle
-                </button>
+                <Button>➕ Yeni Durum Ekle</Button>
             </header>
 
-            {/* Visual Workflow Diagram */}
-            <div className="card" style={{ marginBottom: 'var(--space-lg)' }}>
-                <h3 style={{ marginBottom: 'var(--space-md)' }}>📊 Workflow Diyagramı</h3>
-                <div className="workflow-diagram">
-                    {statuses.map(status => (
-                        <div key={status.key} className="status-node" style={{ borderColor: status.color }}>
-                            <div className="status-header" style={{ backgroundColor: status.color + '20' }}>
-                                {status.label}
-                            </div>
-                            <div className="status-transitions">
-                                {transitions
-                                    .filter(t => t.fromStatusKey === status.key && t.active)
-                                    .map(t => (
-                                        <div key={t.id} className="transition-arrow">
-                                            → {t.toStatus.label}
-                                            {t.requiresNote && ' 📝'}
-                                            {t.requiresParts && ' 📦'}
+            {/* Info Card */}
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+                <div className="flex gap-3">
+                    <span className="text-xl">💡</span>
+                    <div>
+                        <h3 className="font-medium text-foreground">Durum Yönetimi</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            Durumlar iş akışınızın temelini oluşturur. Sıralamayı değiştirmek için ok tuşlarını kullanın.
+                            Aktif olmayan durumlar yeni servislerde seçilemez ancak mevcut servisler için görünür kalır.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Status Table */}
+            <div className="rounded-xl border border-border overflow-hidden">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-muted/50">
+                            <TableHead className="w-16">Sıra</TableHead>
+                            <TableHead>Durum Adı</TableHead>
+                            <TableHead>Anahtar</TableHead>
+                            <TableHead>Renk</TableHead>
+                            <TableHead>Aktif</TableHead>
+                            <TableHead className="text-right">İşlemler</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            <TableRow>
+                                <TableCell colSpan={6} className="text-center py-12">
+                                    <span className="text-muted-foreground">Yükleniyor...</span>
+                                </TableCell>
+                            </TableRow>
+                        ) : (
+                            statuses.map((status, index) => (
+                                <TableRow key={status.id} className={!status.active ? 'opacity-50' : ''}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={() => handleMoveUp(index)}
+                                                disabled={index === 0}
+                                                className="p-1 hover:bg-muted rounded disabled:opacity-30"
+                                            >
+                                                ⬆️
+                                            </button>
+                                            <button
+                                                onClick={() => handleMoveDown(index)}
+                                                disabled={index === statuses.length - 1}
+                                                className="p-1 hover:bg-muted rounded disabled:opacity-30"
+                                            >
+                                                ⬇️
+                                            </button>
+                                            <span className="text-sm text-muted-foreground ml-1">{status.sortOrder}</span>
                                         </div>
-                                    ))
-                                }
-                                {transitions.filter(t => t.fromStatusKey === status.key && t.active).length === 0 && (
-                                    <div className="no-transitions">Çıkış yok</div>
-                                )}
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                                    </TableCell>
+
+                                    <TableCell>
+                                        {editingId === status.id ? (
+                                            <Input
+                                                value={editForm.label}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, label: e.target.value }))}
+                                                className="w-full max-w-xs"
+                                            />
+                                        ) : (
+                                            <span className="font-medium">{status.label}</span>
+                                        )}
+                                    </TableCell>
+
+                                    <TableCell>
+                                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                                            {status.key}
+                                        </code>
+                                    </TableCell>
+
+                                    <TableCell>
+                                        {editingId === status.id ? (
+                                            <Input
+                                                type="color"
+                                                value={editForm.color}
+                                                onChange={(e) => setEditForm(prev => ({ ...prev, color: e.target.value }))}
+                                                className="w-16 h-8 p-0 border-0"
+                                            />
+                                        ) : (
+                                            <div className="flex items-center gap-2">
+                                                <div
+                                                    className="w-6 h-6 rounded border border-border"
+                                                    style={{ backgroundColor: status.color }}
+                                                />
+                                                <span className="text-xs text-muted-foreground">{status.color}</span>
+                                            </div>
+                                        )}
+                                    </TableCell>
+
+                                    <TableCell>
+                                        <button
+                                            onClick={() => handleToggleActive(status.id)}
+                                            className={`
+                        px-3 py-1 rounded-full text-xs font-medium transition-colors
+                        ${status.active
+                                                    ? 'bg-emerald-500/10 text-emerald-600'
+                                                    : 'bg-muted text-muted-foreground'
+                                                }
+                      `}
+                                        >
+                                            {status.active ? '✓ Aktif' : '○ Pasif'}
+                                        </button>
+                                    </TableCell>
+
+                                    <TableCell className="text-right">
+                                        {editingId === status.id ? (
+                                            <div className="flex justify-end gap-2">
+                                                <Button size="sm" onClick={() => handleSave(status.id)}>
+                                                    ✓ Kaydet
+                                                </Button>
+                                                <Button size="sm" variant="secondary" onClick={() => setEditingId(null)}>
+                                                    İptal
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <Button size="sm" variant="secondary" onClick={() => handleEdit(status)}>
+                                                ✏️ Düzenle
+                                            </Button>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
             </div>
 
-            {/* Transitions Table */}
-            <div className="card">
-                <h3 style={{ marginBottom: 'var(--space-md)' }}>📋 Tüm Geçişler</h3>
-                {loading ? (
-                    <div style={{ textAlign: 'center', padding: 'var(--space-xl)' }}>⏳ Yükleniyor...</div>
-                ) : (
-                    <table className="workflow-table">
-                        <thead>
-                            <tr>
-                                <th>Başlangıç</th>
-                                <th>→</th>
-                                <th>Hedef</th>
-                                <th>Not Gerekli</th>
-                                <th>Parça Gerekli</th>
-                                <th>Durum</th>
-                                <th>İşlem</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {transitions.map(t => (
-                                <tr key={t.id} className={!t.active ? 'inactive' : ''}>
-                                    <td>
-                                        <span
-                                            className="status-badge"
-                                            style={{ backgroundColor: t.fromStatus.color + '20', color: t.fromStatus.color }}
-                                        >
-                                            {t.fromStatusKey === '*' ? 'Herhangi' : t.fromStatus.label}
-                                        </span>
-                                    </td>
-                                    <td style={{ textAlign: 'center', fontSize: '1.2rem' }}>→</td>
-                                    <td>
-                                        <span
-                                            className="status-badge"
-                                            style={{ backgroundColor: t.toStatus.color + '20', color: t.toStatus.color }}
-                                        >
-                                            {t.toStatus.label}
-                                        </span>
-                                    </td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        {t.requiresNote ? '✅' : '—'}
-                                    </td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        {t.requiresParts ? '✅' : '—'}
-                                    </td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <button
-                                            className={`toggle-btn ${t.active ? 'active' : ''}`}
-                                            onClick={() => handleToggleActive(t)}
-                                        >
-                                            {t.active ? 'Aktif' : 'Pasif'}
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <button
-                                            className="btn btn-secondary btn-sm"
-                                            onClick={() => setEditingTransition(t)}
-                                        >
-                                            ✏️
-                                        </button>
-                                        <button
-                                            className="btn btn-secondary btn-sm"
-                                            onClick={() => handleDelete(t.id)}
-                                            style={{ marginLeft: '4px' }}
-                                        >
-                                            🗑️
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                )}
+            {/* Transition Rules Section */}
+            <div className="rounded-xl border border-border bg-card p-6">
+                <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                    🔀 Durum Geçiş Kuralları
+                </h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                    Hangi durumdan hangi duruma geçiş yapılabileceğini ve bu geçiş için gereken koşulları belirleyin.
+                </p>
+
+                <div className="bg-muted/30 rounded-lg p-8 text-center">
+                    <span className="text-4xl block mb-2">🚧</span>
+                    <p className="text-muted-foreground">
+                        Geçiş kuralları editörü yakında eklenecek...
+                    </p>
+                </div>
             </div>
-
-            {/* Add Modal */}
-            {showAddModal && (
-                <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>Yeni Geçiş Ekle</h3>
-                            <button className="modal-close" onClick={() => setShowAddModal(false)}>✕</button>
-                        </div>
-                        <div className="modal-body">
-                            <div className="form-group">
-                                <label className="form-label">Başlangıç Durumu *</label>
-                                <select
-                                    className="form-input"
-                                    value={newTransition.fromStatusKey}
-                                    onChange={e => setNewTransition({ ...newTransition, fromStatusKey: e.target.value })}
-                                >
-                                    <option value="">Seçiniz...</option>
-                                    <option value="*">* Herhangi bir durum</option>
-                                    {statuses.map(s => (
-                                        <option key={s.key} value={s.key}>{s.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label">Hedef Durum *</label>
-                                <select
-                                    className="form-input"
-                                    value={newTransition.toStatusKey}
-                                    onChange={e => setNewTransition({ ...newTransition, toStatusKey: e.target.value })}
-                                >
-                                    <option value="">Seçiniz...</option>
-                                    {statuses.map(s => (
-                                        <option key={s.key} value={s.key}>{s.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={newTransition.requiresNote}
-                                        onChange={e => setNewTransition({ ...newTransition, requiresNote: e.target.checked })}
-                                    />
-                                    📝 Not gerekli
-                                </label>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={newTransition.requiresParts}
-                                        onChange={e => setNewTransition({ ...newTransition, requiresParts: e.target.checked })}
-                                    />
-                                    📦 Parça bilgisi gerekli
-                                </label>
-                            </div>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowAddModal(false)}>İptal</button>
-                            <button className="btn btn-primary" onClick={handleCreate}>Oluştur</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Edit Modal */}
-            {editingTransition && (
-                <div className="modal-overlay" onClick={() => setEditingTransition(null)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>Geçişi Düzenle</h3>
-                            <button className="modal-close" onClick={() => setEditingTransition(null)}>✕</button>
-                        </div>
-                        <div className="modal-body">
-                            <div className="transition-preview">
-                                <span style={{ color: editingTransition.fromStatus.color }}>
-                                    {editingTransition.fromStatus.label}
-                                </span>
-                                <span> → </span>
-                                <span style={{ color: editingTransition.toStatus.color }}>
-                                    {editingTransition.toStatus.label}
-                                </span>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={editingTransition.requiresNote}
-                                        onChange={e => setEditingTransition({
-                                            ...editingTransition,
-                                            requiresNote: e.target.checked
-                                        })}
-                                    />
-                                    📝 Not gerekli
-                                </label>
-                            </div>
-
-                            <div className="form-group">
-                                <label className="checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={editingTransition.requiresParts}
-                                        onChange={e => setEditingTransition({
-                                            ...editingTransition,
-                                            requiresParts: e.target.checked
-                                        })}
-                                    />
-                                    📦 Parça bilgisi gerekli
-                                </label>
-                            </div>
-                        </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setEditingTransition(null)}>İptal</button>
-                            <button className="btn btn-primary" onClick={() => handleUpdate(editingTransition)}>Kaydet</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            <style jsx>{`
-                .workflow-diagram {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-                    gap: var(--space-md);
-                }
-
-                .status-node {
-                    border: 2px solid;
-                    border-radius: var(--radius-md);
-                    overflow: hidden;
-                }
-
-                .status-header {
-                    padding: var(--space-sm);
-                    font-weight: 600;
-                    text-align: center;
-                }
-
-                .status-transitions {
-                    padding: var(--space-sm);
-                    font-size: 0.85rem;
-                }
-
-                .transition-arrow {
-                    padding: 4px 0;
-                    color: var(--color-text-muted);
-                }
-
-                .no-transitions {
-                    color: var(--color-text-subtle);
-                    font-style: italic;
-                }
-
-                .workflow-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-
-                .workflow-table th,
-                .workflow-table td {
-                    padding: var(--space-md);
-                    border-bottom: 1px solid var(--color-border);
-                }
-
-                .workflow-table th {
-                    background: var(--color-bg);
-                    font-weight: 600;
-                    text-align: left;
-                }
-
-                .workflow-table tr.inactive {
-                    opacity: 0.5;
-                }
-
-                .status-badge {
-                    padding: 4px 8px;
-                    border-radius: 4px;
-                    font-size: 0.85rem;
-                    font-weight: 500;
-                }
-
-                .toggle-btn {
-                    padding: 4px 8px;
-                    border: 1px solid var(--color-border);
-                    background: var(--color-bg);
-                    border-radius: var(--radius-sm);
-                    cursor: pointer;
-                    font-size: 0.8rem;
-                }
-
-                .toggle-btn.active {
-                    background: rgba(16, 185, 129, 0.1);
-                    border-color: var(--color-success);
-                    color: var(--color-success);
-                }
-
-                .transition-preview {
-                    text-align: center;
-                    font-size: 1.25rem;
-                    font-weight: 600;
-                    padding: var(--space-md);
-                    background: var(--color-bg);
-                    border-radius: var(--radius-md);
-                    margin-bottom: var(--space-lg);
-                }
-
-                .checkbox-label {
-                    display: flex;
-                    align-items: center;
-                    gap: var(--space-sm);
-                    cursor: pointer;
-                }
-
-                .checkbox-label input {
-                    width: 18px;
-                    height: 18px;
-                }
-
-                .modal-overlay {
-                    position: fixed;
-                    inset: 0;
-                    background: rgba(0,0,0,0.7);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 1000;
-                }
-
-                .modal-content {
-                    background: var(--color-surface);
-                    border-radius: var(--radius-lg);
-                    width: 90%;
-                    max-width: 450px;
-                    border: 1px solid var(--color-border);
-                }
-
-                .modal-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: var(--space-lg);
-                    border-bottom: 1px solid var(--color-border);
-                }
-
-                .modal-header h3 { margin: 0; }
-
-                .modal-close {
-                    background: none;
-                    border: none;
-                    font-size: 1.25rem;
-                    cursor: pointer;
-                    color: var(--color-text-muted);
-                }
-
-                .modal-body {
-                    padding: var(--space-lg);
-                }
-
-                .modal-footer {
-                    display: flex;
-                    justify-content: flex-end;
-                    gap: var(--space-sm);
-                    padding: var(--space-lg);
-                    border-top: 1px solid var(--color-border);
-                }
-            `}</style>
         </div>
     );
 }

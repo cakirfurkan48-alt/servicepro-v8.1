@@ -7,6 +7,8 @@ import RecentServices from '@/components/RecentServices';
 import QuickActions from '@/components/QuickActions';
 import TopPerformers from '@/components/TopPerformers';
 import DashboardCharts from '@/components/DashboardCharts';
+import ActivityFeed from '@/components/ActivityFeed';
+import { Button } from '@/components/ui/button';
 import { fetchServices, fetchStats } from '@/lib/api';
 import { Service } from '@/types';
 
@@ -21,6 +23,7 @@ export default function Dashboard() {
         aktifPersonel: 0,
     });
     const [recentServices, setRecentServices] = useState<Service[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         async function loadData() {
@@ -32,76 +35,122 @@ export default function Dashboard() {
                 setRecentServices(data.slice(0, 5));
             } catch (error) {
                 console.error('Failed to load dashboard data:', error);
+            } finally {
+                setIsLoading(false);
             }
         }
         loadData();
     }, []);
 
     return (
-        <div className="animate-fade-in">
-            <header className="page-header">
+        <div className="p-6 space-y-6">
+            {/* Header */}
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="page-title">Dashboard</h1>
-                    <p style={{ color: 'var(--color-text-muted)' }}>
+                    <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+                    <p className="text-sm text-muted-foreground">
                         Hoş geldiniz! İşte günlük özetiniz.
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
-                    <Link href="/raporlar/whatsapp" className="btn btn-secondary">
-                        📤 WhatsApp Rapor
+                <div className="flex gap-3">
+                    <Link href="/raporlar/whatsapp">
+                        <Button variant="secondary">📤 WhatsApp Rapor</Button>
                     </Link>
-                    <Link href="/planlama/yeni" className="btn btn-primary">
-                        ➕ Yeni Servis
+                    <Link href="/planlama/yeni">
+                        <Button>➕ Yeni Servis</Button>
                     </Link>
                 </div>
             </header>
 
             {/* Stat Cards */}
-            <div className="grid grid-cols-4 gap-6 mb-8">
-                <StatCard
-                    icon="📅"
-                    value={stats.bugunServisleri}
-                    label="Bugünkü Servisler"
-                    color="var(--color-primary)"
-                />
-                <StatCard
-                    icon="🔄"
-                    value={stats.devamEdenler}
-                    label="Devam Eden İşler"
-                    color="var(--color-success)"
-                />
-                <StatCard
-                    icon="📦"
-                    value={stats.parcaBekleyenler + stats.randevular}
-                    label="Bu Ay Tamamlanan"
-                    color="var(--color-warning)"
-                />
-                <StatCard
-                    icon="⭐"
-                    value="4.7/5"
-                    label="Aylık Ortalama Puan"
-                    color="var(--color-accent-gold)"
-                />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-2xl">
+                        📅
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold text-foreground">
+                            {isLoading ? '...' : stats.bugunServisleri}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Bugünkü Servisler</div>
+                    </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-2xl">
+                        🔄
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold text-foreground">
+                            {isLoading ? '...' : stats.devamEdenler}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Devam Eden İşler</div>
+                    </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-2xl">
+                        📦
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold text-foreground">
+                            {isLoading ? '...' : stats.parcaBekleyenler}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Parça Bekleyenler</div>
+                    </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-card p-4 flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center text-2xl">
+                        ✅
+                    </div>
+                    <div>
+                        <div className="text-2xl font-bold text-foreground">
+                            {isLoading ? '...' : stats.tamamlananlar}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Bu Ay Tamamlanan</div>
+                    </div>
+                </div>
             </div>
 
             {/* Charts Section */}
             <DashboardCharts />
 
-            <div className="grid" style={{ gridTemplateColumns: '2fr 1fr', gap: 'var(--space-xl)' }}>
-                {/* Today's Services */}
-                <div className="card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-lg)' }}>
-                        <h2 className="card-title">Bugünkü Servisler</h2>
-                        <Link href="/planlama" style={{ color: 'var(--color-primary)', textDecoration: 'none', fontSize: '0.85rem' }}>
+            {/* Main Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Today's Services - Takes 2 columns */}
+                <div className="lg:col-span-2 rounded-xl border border-border bg-card p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="font-semibold text-foreground flex items-center gap-2">
+                            🛥️ Bugünkü Servisler
+                        </h2>
+                        <Link
+                            href="/planlama"
+                            className="text-sm text-primary hover:underline"
+                        >
                             Tümünü Gör →
                         </Link>
                     </div>
                     <RecentServices services={recentServices} />
                 </div>
 
-                {/* Quick Actions & Top Performers */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+                {/* Activity Feed - Takes 1 column */}
+                <ActivityFeed />
+            </div>
+
+            {/* Quick Actions + Top Performers */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="rounded-xl border border-border bg-card p-6">
+                    <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                        ⚡ Hızlı İşlemler
+                    </h2>
                     <QuickActions />
+                </div>
+
+                <div className="rounded-xl border border-border bg-card p-6">
+                    <h2 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+                        ⭐ Bu Ayın Yıldızları
+                    </h2>
                     <TopPerformers />
                 </div>
             </div>
