@@ -4,29 +4,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { StatusBadge } from '@/components/ui/badge';
-import { isYatmarin, getRowHighlightClass } from '@/lib/yatmarin';
-import { STATUS, StatusValue, STATUS_META } from '@/lib/status';
-
-// Legacy mapping - will be removed after full migration
-const LEGACY_TO_NEW: Record<string, StatusValue> = {
-    'RANDEVU_VERILDI': STATUS.PLANLANDI_RANDEVU,
-    'DEVAM_EDIYOR': STATUS.DEVAM_EDIYOR,
-    'PARCA_BEKLIYOR': STATUS.PARCA_BEKLIYOR,
-    'MUSTERI_ONAY_BEKLIYOR': STATUS.ONAY_BEKLIYOR,
-    'RAPOR_BEKLIYOR': STATUS.RAPOR_BEKLIYOR,
-    'KESIF_KONTROL': STATUS.KESIF_KONTROL,
-    'TAMAMLANDI': STATUS.TAMAMLANDI,
-};
-
-type ServisDurumu =
-    | 'RANDEVU_VERILDI'
-    | 'DEVAM_EDIYOR'
-    | 'PARCA_BEKLIYOR'
-    | 'MUSTERI_ONAY_BEKLIYOR'
-    | 'RAPOR_BEKLIYOR'
-    | 'KESIF_KONTROL'
-    | 'TAMAMLANDI';
+import { isYatmarin } from '@/lib/yatmarin';
+import {
+    STATUS,
+    StatusValue,
+    STATUS_META,
+    ALL_STATUSES,
+    COMPLETED_STATUSES,
+    isCompletedStatus
+} from '@/lib/status';
 
 interface Service {
     id: string;
@@ -36,26 +22,20 @@ interface Service {
     adres: string;
     yer?: string;
     servisAciklamasi: string;
-    durum: ServisDurumu;
+    durum: string; // Can be legacy or new format
     atananPersonel?: { rol: string; personnelAd: string }[];
+    closureTeam?: {
+        responsibles: string[];
+        supports: string[];
+    };
 }
-
-const DURUM_OPTIONS: { value: ServisDurumu; label: string; icon: string }[] = [
-    { value: 'RANDEVU_VERILDI', label: 'Randevu', icon: '📅' },
-    { value: 'DEVAM_EDIYOR', label: 'Devam', icon: '🔄' },
-    { value: 'PARCA_BEKLIYOR', label: 'Parça', icon: '📦' },
-    { value: 'MUSTERI_ONAY_BEKLIYOR', label: 'Onay', icon: '✋' },
-    { value: 'RAPOR_BEKLIYOR', label: 'Rapor', icon: '📝' },
-    { value: 'KESIF_KONTROL', label: 'Keşif', icon: '🔍' },
-    { value: 'TAMAMLANDI', label: 'Tamam', icon: '✅' },
-];
 
 interface ServiceTableProps {
     services: Service[];
     showCheckbox: boolean;
     selectedIds: Set<string>;
     onToggleSelect: (id: string) => void;
-    onDurumChange: (service: Service, newDurum: ServisDurumu) => void;
+    onDurumChange: (service: Service, newDurum: StatusValue) => void;
     onPartsClick: (service: Service) => void;
 }
 
@@ -78,7 +58,7 @@ export default function ServiceTable({
                         <TableHead>Konum</TableHead>
                         <TableHead>Servis</TableHead>
                         <TableHead>Durum</TableHead>
-                        <TableHead>Sorumlu</TableHead>
+                        <TableHead>Ekip</TableHead>
                         <TableHead className="text-right">İşlemler</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -116,7 +96,7 @@ interface ServiceRowProps {
     showCheckbox: boolean;
     isSelected: boolean;
     onToggleSelect: () => void;
-    onDurumChange: (durum: ServisDurumu) => void;
+    onDurumChange: (durum: StatusValue) => void;
     onPartsClick: () => void;
 }
 
@@ -130,15 +110,23 @@ function ServiceRow({
 }: ServiceRowProps) {
     const [showDurumDropdown, setShowDurumDropdown] = useState(false);
     const isYatmarinService = isYatmarin(service.adres, service.yer);
-    const newStatus = LEGACY_TO_NEW[service.durum] || STATUS.PLANLANDI_RANDEVU;
-    const statusMeta = STATUS_META[newStatus];
+
+    // Get status meta (handle both legacy and new formats)
+    const statusMeta = STATUS_META[service.durum as StatusValue] || STATUS_META[STATUS.PLANLANDI_RANDEVU];
+    const isCompleted = isCompletedStatus(service.durum as StatusValue);
+
+    // Closure team summary
+    const responsibleCount = service.closureTeam?.responsibles?.length || 0;
+    const supportCount = service.closureTeam?.supports?.length || 0;
+    const responsibleName = service.atananPersonel?.find(p => p.rol === 'sorumlu')?.personnelAd;
 
     return (
         <TableRow
             className={`
-        ${isSelected ? 'bg-primary/10' : ''}
-        ${isYatmarinService ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-sky-50/50 dark:bg-sky-950/10'}
-      `}
+                ${isSelected ? 'bg-primary/10' : ''}
+                ${isYatmarinService ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-sky-50/50 dark:bg-sky-950/10'}
+                ${isCompleted ? 'opacity-60' : ''}
+            `}
         >
             {showCheckbox && (
                 <TableCell>
@@ -197,11 +185,11 @@ function ServiceRow({
                         <span
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
                             style={{
-                                backgroundColor: statusMeta?.bg || '#e5e7eb',
-                                color: statusMeta?.text || '#374151'
+                                backgroundColor: statusMeta.bg,
+                                color: statusMeta.text
                             }}
                         >
-                            {statusMeta?.icon} {statusMeta?.label || service.durum}
+                            {statusMeta.icon} {statusMeta.label}
                         </span>
                     </button>
 
@@ -211,25 +199,32 @@ function ServiceRow({
                                 className="fixed inset-0 z-10"
                                 onClick={() => setShowDurumDropdown(false)}
                             />
-                            <div className="absolute top-full left-0 mt-1 z-20 bg-popover border border-border rounded-lg shadow-lg min-w-[180px] p-1">
-                                {DURUM_OPTIONS.map((opt) => (
-                                    <button
-                                        key={opt.value}
-                                        onClick={() => {
-                                            onDurumChange(opt.value);
-                                            setShowDurumDropdown(false);
-                                        }}
-                                        className={`
-                      w-full text-left px-3 py-2 text-sm rounded-md transition-colors
-                      ${service.durum === opt.value
-                                                ? 'bg-primary text-primary-foreground'
-                                                : 'hover:bg-accent text-foreground'
-                                            }
-                    `}
-                                    >
-                                        {opt.icon} {opt.label}
-                                    </button>
-                                ))}
+                            <div className="absolute top-full left-0 mt-1 z-20 bg-popover border border-border rounded-lg shadow-lg min-w-[200px] p-1 max-h-[300px] overflow-y-auto">
+                                {ALL_STATUSES.map((status) => {
+                                    const meta = STATUS_META[status];
+                                    const isCurrentStatus = service.durum === status;
+                                    const isCompletedOpt = COMPLETED_STATUSES.includes(status);
+
+                                    return (
+                                        <button
+                                            key={status}
+                                            onClick={() => {
+                                                onDurumChange(status);
+                                                setShowDurumDropdown(false);
+                                            }}
+                                            className={`
+                                                w-full text-left px-3 py-2 text-sm rounded-md transition-colors
+                                                ${isCurrentStatus
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'hover:bg-accent text-foreground'
+                                                }
+                                                ${isCompletedOpt && !isCurrentStatus ? 'opacity-60' : ''}
+                                            `}
+                                        >
+                                            {meta.icon} {meta.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </>
                     )}
@@ -238,7 +233,22 @@ function ServiceRow({
 
             <TableCell>
                 <div className="text-sm">
-                    {service.atananPersonel?.find((p) => p.rol === 'sorumlu')?.personnelAd || (
+                    {responsibleCount > 0 || supportCount > 0 ? (
+                        <div className="flex flex-col gap-0.5">
+                            {responsibleCount > 0 && (
+                                <span className="text-xs">
+                                    👤 Sorumlu: <strong>{responsibleCount}</strong>
+                                </span>
+                            )}
+                            {supportCount > 0 && (
+                                <span className="text-xs text-muted-foreground">
+                                    🤝 Destek: {supportCount}
+                                </span>
+                            )}
+                        </div>
+                    ) : responsibleName ? (
+                        <span>{responsibleName}</span>
+                    ) : (
                         <span className="text-muted-foreground">Atanmadı</span>
                     )}
                 </div>
