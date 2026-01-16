@@ -3,31 +3,17 @@
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-
-// Status types from legacy system - will migrate to new status.ts
-type ServisDurumu =
-    | 'RANDEVU_VERILDI'
-    | 'DEVAM_EDIYOR'
-    | 'PARCA_BEKLIYOR'
-    | 'MUSTERI_ONAY_BEKLIYOR'
-    | 'RAPOR_BEKLIYOR'
-    | 'KESIF_KONTROL'
-    | 'TAMAMLANDI';
+import {
+    STATUS,
+    StatusValue,
+    STATUS_META,
+    ACTIVE_STATUSES,
+    COMPLETED_STATUSES,
+    ALL_STATUSES
+} from '@/lib/status';
 
 type KonumGrubu = 'YATMARIN' | 'NETSEL' | 'DIS_SERVIS';
-
-// Legacy config - will be replaced with new status system
-const DURUM_CONFIG: Record<ServisDurumu, { label: string; color: string; icon: string }> = {
-    RANDEVU_VERILDI: { label: 'Randevu', color: '#86efac', icon: '📅' },
-    DEVAM_EDIYOR: { label: 'Devam', color: '#22c55e', icon: '🔄' },
-    PARCA_BEKLIYOR: { label: 'Parça', color: '#60a5fa', icon: '📦' },
-    MUSTERI_ONAY_BEKLIYOR: { label: 'Onay', color: '#3b82f6', icon: '✋' },
-    RAPOR_BEKLIYOR: { label: 'Rapor', color: '#818cf8', icon: '📝' },
-    KESIF_KONTROL: { label: 'Keşif', color: '#c4b5fd', icon: '🔍' },
-    TAMAMLANDI: { label: 'Tamam', color: '#a78bfa', icon: '✅' },
-};
 
 const KONUM_CONFIG: Record<KonumGrubu, { label: string; color: string; icon: string }> = {
     YATMARIN: { label: 'Yatmarin', color: '#fbbf24', icon: '⚓' },
@@ -42,19 +28,16 @@ interface PlanningToolbarProps {
     onSearchChange: (value: string) => void;
     sortBy: 'tarih' | 'konum' | 'durum';
     onSortChange: (value: 'tarih' | 'konum' | 'durum') => void;
-    selectedDurumlar: ServisDurumu[];
-    onDurumToggle: (durum: ServisDurumu) => void;
+    selectedDurumlar: StatusValue[];
+    onDurumToggle: (durum: StatusValue) => void;
     selectedKonumlar: KonumGrubu[];
     onKonumToggle: (konum: KonumGrubu) => void;
     isAdmin: boolean;
     showBulkActions: boolean;
     onBulkActionsToggle: () => void;
+    showArchive: boolean;
+    onArchiveToggle: () => void;
 }
-
-const durumSirasi: ServisDurumu[] = [
-    'RANDEVU_VERILDI', 'DEVAM_EDIYOR', 'PARCA_BEKLIYOR',
-    'MUSTERI_ONAY_BEKLIYOR', 'RAPOR_BEKLIYOR', 'KESIF_KONTROL', 'TAMAMLANDI'
-];
 
 const konumListesi: KonumGrubu[] = ['YATMARIN', 'NETSEL', 'DIS_SERVIS'];
 
@@ -72,7 +55,12 @@ export default function PlanningToolbar({
     isAdmin,
     showBulkActions,
     onBulkActionsToggle,
+    showArchive,
+    onArchiveToggle,
 }: PlanningToolbarProps) {
+    // Show active statuses, optionally show completed (archive)
+    const visibleStatuses = showArchive ? ALL_STATUSES : ACTIVE_STATUSES;
+
     return (
         <div className="space-y-4">
             {/* Header */}
@@ -102,7 +90,7 @@ export default function PlanningToolbar({
 
             {/* Filters Card */}
             <div className="rounded-xl border border-border bg-card p-4 space-y-4">
-                {/* Search + Sort Row */}
+                {/* Search + Sort + Archive Toggle Row */}
                 <div className="flex flex-col md:flex-row gap-3">
                     <Input
                         type="text"
@@ -121,34 +109,52 @@ export default function PlanningToolbar({
                         <option value="konum">Konuma Göre</option>
                         <option value="durum">Duruma Göre</option>
                     </Select>
+
+                    {/* Archive Toggle */}
+                    <button
+                        onClick={onArchiveToggle}
+                        className={`
+                            px-4 py-2 text-sm font-medium rounded-lg border-2 transition-all whitespace-nowrap
+                            ${showArchive
+                                ? 'bg-violet-500/10 text-violet-600 border-violet-500/30'
+                                : 'bg-transparent text-muted-foreground border-border hover:border-primary/50'
+                            }
+                        `}
+                    >
+                        {showArchive ? '📁 Arşiv Gösteriliyor' : '📁 Arşivi Göster'}
+                    </button>
                 </div>
 
-                {/* Status Filters */}
+                {/* Status Filters - Using STATUS_META for full labels */}
                 <div>
                     <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                         Durum
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        {durumSirasi.map((durum) => {
-                            const config = DURUM_CONFIG[durum];
+                        {visibleStatuses.map((durum) => {
+                            const meta = STATUS_META[durum];
                             const isSelected = selectedDurumlar.includes(durum);
+                            const isCompleted = COMPLETED_STATUSES.includes(durum);
+
                             return (
                                 <button
                                     key={durum}
                                     onClick={() => onDurumToggle(durum)}
                                     className={`
-                    px-3 py-1.5 text-xs font-semibold rounded-full border-2 transition-all
-                    ${isSelected
+                                        px-3 py-1.5 text-xs font-semibold rounded-full border-2 transition-all
+                                        ${isSelected
                                             ? 'text-white'
                                             : 'bg-transparent text-muted-foreground border-border hover:border-primary/50'
                                         }
-                  `}
+                                        ${isCompleted && !isSelected ? 'opacity-60' : ''}
+                                    `}
                                     style={{
-                                        backgroundColor: isSelected ? config.color : undefined,
-                                        borderColor: isSelected ? config.color : undefined,
+                                        backgroundColor: isSelected ? meta.bg : undefined,
+                                        borderColor: isSelected ? meta.bg : undefined,
+                                        color: isSelected ? meta.text : undefined,
                                     }}
                                 >
-                                    {config.icon} {config.label}
+                                    {meta.icon} {meta.label}
                                 </button>
                             );
                         })}
@@ -169,12 +175,12 @@ export default function PlanningToolbar({
                                     key={konum}
                                     onClick={() => onKonumToggle(konum)}
                                     className={`
-                    px-3 py-1.5 text-xs font-semibold rounded-lg border-2 transition-all
-                    ${isSelected
+                                        px-3 py-1.5 text-xs font-semibold rounded-lg border-2 transition-all
+                                        ${isSelected
                                             ? 'text-white'
                                             : 'bg-transparent text-muted-foreground border-border hover:border-primary/50'
                                         }
-                  `}
+                                    `}
                                     style={{
                                         backgroundColor: isSelected ? config.color : undefined,
                                         borderColor: isSelected ? config.color : undefined,
@@ -190,3 +196,5 @@ export default function PlanningToolbar({
         </div>
     );
 }
+
+export type { KonumGrubu };

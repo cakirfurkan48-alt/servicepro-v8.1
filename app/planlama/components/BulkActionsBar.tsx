@@ -2,33 +2,15 @@
 
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
-
-type ServisDurumu =
-    | 'RANDEVU_VERILDI'
-    | 'DEVAM_EDIYOR'
-    | 'PARCA_BEKLIYOR'
-    | 'MUSTERI_ONAY_BEKLIYOR'
-    | 'RAPOR_BEKLIYOR'
-    | 'KESIF_KONTROL'
-    | 'TAMAMLANDI';
-
-const DURUM_OPTIONS: { value: ServisDurumu; label: string }[] = [
-    { value: 'RANDEVU_VERILDI', label: 'Randevu Verildi' },
-    { value: 'DEVAM_EDIYOR', label: 'Devam Ediyor' },
-    { value: 'PARCA_BEKLIYOR', label: 'Parça Bekliyor' },
-    { value: 'MUSTERI_ONAY_BEKLIYOR', label: 'Onay Bekliyor' },
-    { value: 'RAPOR_BEKLIYOR', label: 'Rapor Bekliyor' },
-    { value: 'KESIF_KONTROL', label: 'Keşif/Kontrol' },
-    { value: 'TAMAMLANDI', label: 'Tamamlandı' },
-];
+import { STATUS, StatusValue, STATUS_META, ALL_STATUSES } from '@/lib/status';
 
 interface BulkActionsBarProps {
     selectedCount: number;
     totalCount: number;
     isAllSelected: boolean;
     onSelectAll: () => void;
-    bulkDurum: ServisDurumu | '';
-    onBulkDurumChange: (value: ServisDurumu | '') => void;
+    bulkDurum: StatusValue | '';
+    onBulkDurumChange: (value: StatusValue | '') => void;
     onApplyBulkDurum: () => void;
     onBulkDelete: () => void;
 }
@@ -65,17 +47,20 @@ export default function BulkActionsBar({
                     <div className="flex items-center gap-2">
                         <label className="text-sm text-muted-foreground">Durum:</label>
                         <Select
-                            className="w-44"
+                            className="w-52"
                             value={bulkDurum}
-                            onChange={(e) => onBulkDurumChange(e.target.value as ServisDurumu | '')}
+                            onChange={(e) => onBulkDurumChange(e.target.value as StatusValue | '')}
                             aria-label="Toplu durum değiştir"
                         >
                             <option value="">Seçin...</option>
-                            {DURUM_OPTIONS.map((opt) => (
-                                <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                </option>
-                            ))}
+                            {ALL_STATUSES.map((status) => {
+                                const meta = STATUS_META[status];
+                                return (
+                                    <option key={status} value={status}>
+                                        {meta.icon} {meta.label}
+                                    </option>
+                                );
+                            })}
                         </Select>
                         <Button
                             onClick={onApplyBulkDurum}

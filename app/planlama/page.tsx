@@ -5,31 +5,32 @@ import CompletionSidebar from '@/components/CompletionSidebar';
 import PartsSidebar from '@/components/PartsSidebar';
 import { fetchServices, updateService, deleteService } from '@/lib/api';
 import { useAdmin } from '@/lib/admin-context';
+import { Service, KonumGrubu, getKonumGrubu, KapanisRaporu, ParcaBekleme, PersonelAtama } from '@/types';
 import {
-    Service, ServisDurumu, DURUM_CONFIG,
-    KonumGrubu, getKonumGrubu, KapanisRaporu, ParcaBekleme,
-    PersonelAtama
-} from '@/types';
+    STATUS,
+    StatusValue,
+    ACTIVE_STATUSES,
+    COMPLETED_STATUSES,
+    isActiveStatus,
+    getStatusPriority
+} from '@/lib/status';
+import { isYatmarin } from '@/lib/yatmarin';
 
 // Modular Components
 import PlanningToolbar from './components/PlanningToolbar';
 import BulkActionsBar from './components/BulkActionsBar';
 import ServiceTable from './components/ServiceTable';
 
-const durumSirasi: ServisDurumu[] = [
-    'RANDEVU_VERILDI', 'DEVAM_EDIYOR', 'PARCA_BEKLIYOR',
-    'MUSTERI_ONAY_BEKLIYOR', 'RAPOR_BEKLIYOR', 'KESIF_KONTROL', 'TAMAMLANDI'
-];
-
 export default function PlanlamaPage() {
     const { isAdmin } = useAdmin();
     const [services, setServices] = useState<Service[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Filters
-    const [selectedDurumlar, setSelectedDurumlar] = useState<ServisDurumu[]>([
-        'RANDEVU_VERILDI', 'DEVAM_EDIYOR', 'PARCA_BEKLIYOR', 'MUSTERI_ONAY_BEKLIYOR', 'RAPOR_BEKLIYOR', 'KESIF_KONTROL'
-    ]);
+    // Archive toggle - default OFF (only active services)
+    const [showArchive, setShowArchive] = useState(false);
+
+    // Filters - default to active statuses only
+    const [selectedDurumlar, setSelectedDurumlar] = useState<StatusValue[]>([...ACTIVE_STATUSES]);
     const [selectedKonumlar, setSelectedKonumlar] = useState<KonumGrubu[]>(['YATMARIN', 'NETSEL', 'DIS_SERVIS']);
     const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState<'tarih' | 'konum' | 'durum'>('tarih');
@@ -37,7 +38,7 @@ export default function PlanlamaPage() {
     // Bulk selection
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [showBulkActions, setShowBulkActions] = useState(false);
-    const [bulkDurum, setBulkDurum] = useState<ServisDurumu | ''>('');
+    const [bulkDurum, setBulkDurum] = useState<StatusValue | ''>('');
 
     // Sidebar states
     const [completionService, setCompletionService] = useState<Service | null>(null);
@@ -46,6 +47,22 @@ export default function PlanlamaPage() {
     useEffect(() => {
         loadServices();
     }, []);
+
+    // When archive toggle changes, update selected durumlar
+    useEffect(() => {
+        if (showArchive) {
+            // Include completed statuses when archive is shown
+            setSelectedDurumlar(prev => {
+                const newSet = new Set([...prev, ...COMPLETED_STATUSES]);
+                return Array.from(newSet) as StatusValue[];
+            });
+        } else {
+            // Exclude completed statuses when archive is hidden
+            setSelectedDurumlar(prev =>
+                prev.filter(d => !COMPLETED_STATUSES.includes(d))
+            );
+        }
+    }, [showArchive]);
 
     const loadServices = async () => {
         setIsLoading(true);
@@ -60,7 +77,7 @@ export default function PlanlamaPage() {
     };
 
     // Filter handlers
-    const toggleDurum = (durum: ServisDurumu) => {
+    const toggleDurum = (durum: StatusValue) => {
         setSelectedDurumlar(prev =>
             prev.includes(durum)
                 ? prev.filter(d => d !== durum)
@@ -127,10 +144,12 @@ export default function PlanlamaPage() {
         setShowBulkActions(false);
     };
 
-    const handleDurumChange = async (service: Service, newDurum: ServisDurumu) => {
-        if (newDurum === 'TAMAMLANDI') {
+    const handleDurumChange = async (service: Service, newDurum: any) => {
+        const normalized = newDurum as StatusValue;
+
+        if (normalized === STATUS.TAMAMLANDI || normalized === STATUS.KESIF_KONTROL) {
             setCompletionService(service);
-        } else if (newDurum === 'PARCA_BEKLIYOR') {
+        } else if (normalized === STATUS.PARCA_BEKLIYOR) {
             setServices(prev => prev.map(s => s.id === service.id ? { ...s, durum: newDurum } : s));
             setPartsService(service);
             await updateService(service.id, { durum: newDurum });
@@ -142,7 +161,7 @@ export default function PlanlamaPage() {
 
     const handleComplete = async (rapor: KapanisRaporu, personelAtamalari: PersonelAtama[]) => {
         if (completionService) {
-            const updated = { durum: 'TAMAMLANDI' as ServisDurumu, kapanisRaporu: rapor, atananPersonel: personelAtamalari };
+            const updated = { durum: STATUS.TAMAMLANDI, kapanisRaporu: rapor, atananPersonel: personelAtamalari };
             setServices(prev => prev.map(s =>
                 s.id === completionService.id ? { ...s, ...updated } : s
             ));
@@ -160,9 +179,11 @@ export default function PlanlamaPage() {
         }
     };
 
-    // Filtering
+    // Filtering with status normalization
     const filteredServices = services.filter(s => {
-        const durumMatch = selectedDurumlar.includes(s.durum);
+        // Normalize service status for comparison
+        const serviceStatus = s.durum as StatusValue;
+        const durumMatch = selectedDurumlar.includes(serviceStatus);
         const konumMatch = selectedKonumlar.includes(getKonumGrubu(s.adres));
         const searchMatch =
             s.tekneAdi.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -170,20 +191,31 @@ export default function PlanlamaPage() {
         return durumMatch && konumMatch && searchMatch;
     });
 
-    // Sorting with Yatmarin priority
+    // Sorting with Yatmarin priority + Status priority + Date
     const sortedServices = [...filteredServices].sort((a, b) => {
-        // Yatmarin first
-        const aYatmarin = a.adres?.toLowerCase().includes('yatmarin') || a.yer?.toLowerCase().includes('yatmarin');
-        const bYatmarin = b.adres?.toLowerCase().includes('yatmarin') || b.yer?.toLowerCase().includes('yatmarin');
+        // 1. Yatmarin first
+        const aYatmarin = isYatmarin(a.adres, a.yer);
+        const bYatmarin = isYatmarin(b.adres, b.yer);
 
         if (aYatmarin && !bYatmarin) return -1;
         if (!aYatmarin && bYatmarin) return 1;
 
-        // Then by selected criteria
-        if (sortBy === 'tarih') return new Date(b.tarih).getTime() - new Date(a.tarih).getTime();
-        if (sortBy === 'konum') return getKonumGrubu(a.adres).localeCompare(getKonumGrubu(b.adres));
-        if (sortBy === 'durum') return durumSirasi.indexOf(a.durum) - durumSirasi.indexOf(b.durum);
-        return 0;
+        // 2. Status priority
+        const aPriority = getStatusPriority(a.durum as StatusValue);
+        const bPriority = getStatusPriority(b.durum as StatusValue);
+
+        if (aPriority !== bPriority) {
+            return aPriority - bPriority;
+        }
+
+        // 3. Date (empty first, then oldest to newest)
+        const aDate = a.tarih ? new Date(a.tarih).getTime() : 0;
+        const bDate = b.tarih ? new Date(b.tarih).getTime() : 0;
+
+        if (aDate === 0 && bDate !== 0) return -1;
+        if (aDate !== 0 && bDate === 0) return 1;
+
+        return aDate - bDate;
     });
 
     return (
@@ -203,6 +235,8 @@ export default function PlanlamaPage() {
                 isAdmin={isAdmin}
                 showBulkActions={showBulkActions}
                 onBulkActionsToggle={() => setShowBulkActions(!showBulkActions)}
+                showArchive={showArchive}
+                onArchiveToggle={() => setShowArchive(!showArchive)}
             />
 
             {/* Bulk Actions Bar */}

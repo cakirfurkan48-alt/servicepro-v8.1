@@ -38,6 +38,32 @@ export const ACTIVE_STATUSES: StatusValue[] = [
     STATUS.PARCA_BEKLIYOR,
 ];
 
+// Tamamlanmış sayılan durumlar (arşiv)
+export const COMPLETED_STATUSES: StatusValue[] = [
+    STATUS.TAMAMLANDI,
+    STATUS.KESIF_KONTROL,
+    STATUS.IPTAL,
+];
+
+// Tüm durumlar (sıralı)
+export const ALL_STATUSES: StatusValue[] = [
+    STATUS.DEVAM_EDIYOR,
+    STATUS.PLANLANDI_RANDEVU,
+    STATUS.PARCA_BEKLIYOR,
+    STATUS.ONAY_BEKLIYOR,
+    STATUS.RAPOR_BEKLIYOR,
+    STATUS.TAMAMLANDI,
+    STATUS.KESIF_KONTROL,
+    STATUS.IPTAL,
+];
+
+/**
+ * Check if status is completed (archive)
+ */
+export function isCompletedStatus(status: StatusValue): boolean {
+    return COMPLETED_STATUSES.includes(status);
+}
+
 // Durum meta verileri (label, color, icon)
 export const STATUS_META: Record<StatusValue, {
     label: string;
