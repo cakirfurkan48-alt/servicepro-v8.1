@@ -1,17 +1,32 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
+import { STATUS, StatusValue, STATUS_META } from '@/lib/status';
 import {
     Service, IsTuru, IS_TURU_CONFIG, RAPOR_GEREKSINIMLERI, KapanisRaporu,
     PersonelAtama, UNVAN_CONFIG, TUM_PERSONEL, Personnel
 } from '@/types';
 import { hesaplaRaporBasarisi, hesaplaBireyselPuan } from '@/lib/scoring-calculator';
 
+export interface ClosureData {
+    rapor: KapanisRaporu;
+    personelAtamalari: PersonelAtama[];
+    closedByUserEmail: string;
+    closedByUserName: string;
+    closedAt: string;
+    closureId: string;
+}
+
 interface CompletionSidebarProps {
     service: Service | null;
     isOpen: boolean;
     onClose: () => void;
     onComplete: (rapor: KapanisRaporu, personelAtamalari: PersonelAtama[]) => void;
+    currentUserEmail?: string;
+    currentUserName?: string;
 }
 
 const raporAlanlari = [
@@ -46,9 +61,24 @@ interface PersonelSecimi {
     bonus: boolean;
 }
 
-export default function CompletionSidebar({ service, isOpen, onClose, onComplete }: CompletionSidebarProps) {
+function generateClosureId(): string {
+    const timestamp = Date.now().toString(36);
+    const random = Math.random().toString(36).substring(2, 6);
+    return `CLS-${timestamp}-${random}`.toUpperCase();
+}
+
+export default function CompletionSidebar({
+    service,
+    isOpen,
+    onClose,
+    onComplete,
+    currentUserEmail = 'system@servicepro.local',
+    currentUserName = 'Sistem',
+}: CompletionSidebarProps) {
     const [rapor, setRapor] = useState<KapanisRaporu>(defaultRapor);
     const [personelSecimleri, setPersonelSecimleri] = useState<PersonelSecimi[]>([]);
+    const [validationError, setValidationError] = useState<string | null>(null);
+    const [selectedStatus, setSelectedStatus] = useState<StatusValue>(STATUS.TAMAMLANDI);
 
     // Initialize personnel selections when service changes
     useEffect(() => {
@@ -58,7 +88,7 @@ export default function CompletionSidebar({ service, isOpen, onClose, onComplete
 
             // Initialize with pre-assigned personnel checked
             const initialSecimleri: PersonelSecimi[] = teknisyenler.map(p => {
-                const atama = service.atananPersonel.find(a => a.personnelId === p.id);
+                const atama = service.atananPersonel?.find(a => a.personnelId === p.id);
                 return {
                     personnelId: p.id,
                     personnelAd: p.ad,
@@ -72,25 +102,30 @@ export default function CompletionSidebar({ service, isOpen, onClose, onComplete
             setPersonelSecimleri(initialSecimleri);
             setRapor({
                 ...defaultRapor,
-                raporlayanPersonel: service.atananPersonel.find(p => p.rol === 'sorumlu')?.personnelAd || '',
+                raporlayanPersonel: service.atananPersonel?.find(p => p.rol === 'sorumlu')?.personnelAd || '',
                 raporTarihi: new Date().toISOString().split('T')[0],
             });
+            setValidationError(null);
         }
     }, [service]);
 
     if (!service || !isOpen) return null;
 
-    const gerekliAlanlar = RAPOR_GEREKSINIMLERI[service.isTuru];
+    const gerekliAlanlar = RAPOR_GEREKSINIMLERI[service.isTuru] || [];
     const raporBasarisi = hesaplaRaporBasarisi(rapor, service.isTuru);
 
     const seciliPersoneller = personelSecimleri.filter(p => p.secili);
     const sorumlular = seciliPersoneller.filter(p => p.rol === 'sorumlu');
     const destekler = seciliPersoneller.filter(p => p.rol === 'destek');
 
+    // Validation: responsibles + supports >= 1
+    const isValidTeam = sorumlular.length + destekler.length >= 1;
+
     const toggleSecim = (personnelId: string) => {
         setPersonelSecimleri(prev => prev.map(p =>
             p.personnelId === personnelId ? { ...p, secili: !p.secili } : p
         ));
+        setValidationError(null);
     };
 
     const setRol = (personnelId: string, rol: 'sorumlu' | 'destek') => {
@@ -106,6 +141,12 @@ export default function CompletionSidebar({ service, isOpen, onClose, onComplete
     };
 
     const handleComplete = () => {
+        // Validate team selection
+        if (!isValidTeam) {
+            setValidationError('⚠️ En az 1 personel (sorumlu veya destek) seçilmelidir!');
+            return;
+        }
+
         const atamalar: PersonelAtama[] = seciliPersoneller.map(p => ({
             personnelId: p.personnelId,
             personnelAd: p.personnelAd,
@@ -114,178 +155,146 @@ export default function CompletionSidebar({ service, isOpen, onClose, onComplete
             bonus: p.bonus,
         }));
 
-        onComplete(rapor, atamalar);
+        // Add closure metadata to rapor
+        const finalRapor: KapanisRaporu = {
+            ...rapor,
+            closedByUserEmail: currentUserEmail,
+            closedByUserName: currentUserName,
+            closedAt: new Date().toISOString(),
+            closureId: generateClosureId(),
+        };
+
+        onComplete(finalRapor, atamalar);
         onClose();
     };
 
     return (
-        <>
-            {/* Backdrop */}
-            <div
-                onClick={onClose}
-                style={{
-                    position: 'fixed',
-                    inset: 0,
-                    background: 'rgba(0,0,0,0.7)',
-                    zIndex: 200,
-                }}
-            />
-
-            {/* Sidebar */}
-            <div style={{
-                position: 'fixed',
-                right: 0,
-                top: 0,
-                bottom: 0,
-                width: '520px',
-                background: 'var(--color-surface)',
-                boxShadow: 'var(--shadow-lg)',
-                zIndex: 201,
-                display: 'flex',
-                flexDirection: 'column',
-                animation: 'slideIn 0.3s ease',
-            }}>
+        <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DrawerContent side="right" className="w-full max-w-xl">
                 {/* Header */}
-                <div style={{
-                    padding: 'var(--space-lg)',
-                    borderBottom: '1px solid var(--color-border)',
-                    background: 'linear-gradient(135deg, var(--color-success) 0%, #059669 100%)',
-                    color: 'white',
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <h2 style={{ margin: 0, fontSize: '1.25rem' }}>✓ Servis Tamamlama</h2>
-                        <button
-                            onClick={onClose}
-                            style={{
-                                background: 'rgba(255,255,255,0.2)',
-                                border: 'none',
-                                borderRadius: 'var(--radius-full)',
-                                width: '32px',
-                                height: '32px',
-                                color: 'white',
-                                cursor: 'pointer',
-                                fontSize: '1.2rem',
-                            }}
-                        >
-                            ×
-                        </button>
+                <DrawerHeader className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
+                    <DrawerTitle className="flex items-center gap-2">
+                        ✓ Servis Tamamlama
+                    </DrawerTitle>
+                    <div className="text-sm opacity-90 mt-1">
+                        {service.tekneAdi} • {service.servisAciklamasi?.substring(0, 40)}...
                     </div>
-                    <div style={{ marginTop: 'var(--space-sm)', opacity: 0.9 }}>
-                        {service.tekneAdi} • {service.servisAciklamasi.substring(0, 40)}...
-                    </div>
-                </div>
+                </DrawerHeader>
 
                 {/* Content */}
-                <div style={{ flex: 1, overflow: 'auto', padding: 'var(--space-lg)' }}>
-                    {/* İş Tipi */}
-                    <div style={{
-                        display: 'inline-block',
-                        padding: 'var(--space-xs) var(--space-sm)',
-                        background: 'var(--color-accent-gold)',
-                        color: 'black',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        marginBottom: 'var(--space-lg)',
-                    }}>
-                        {IS_TURU_CONFIG[service.isTuru].label} (×{IS_TURU_CONFIG[service.isTuru].carpan})
+                <div className="flex-1 overflow-auto p-6 space-y-6">
+                    {/* İş Tipi Badge */}
+                    <div className="inline-block px-3 py-1 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 rounded text-sm font-semibold">
+                        {IS_TURU_CONFIG[service.isTuru]?.label} (×{IS_TURU_CONFIG[service.isTuru]?.carpan})
+                    </div>
+
+                    {/* Status Selection */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-foreground">Final Durum</label>
+                        <div className="flex gap-2">
+                            {[STATUS.TAMAMLANDI, STATUS.KESIF_KONTROL].map((status) => {
+                                const meta = STATUS_META[status];
+                                const isSelected = selectedStatus === status;
+                                return (
+                                    <button
+                                        key={status}
+                                        onClick={() => setSelectedStatus(status)}
+                                        className={`
+                                            px-4 py-2 rounded-lg text-sm font-medium transition-all
+                                            ${isSelected
+                                                ? 'ring-2 ring-primary ring-offset-2'
+                                                : 'opacity-60 hover:opacity-100'
+                                            }
+                                        `}
+                                        style={{
+                                            backgroundColor: meta.bg,
+                                            color: meta.text,
+                                        }}
+                                    >
+                                        {meta.icon} {meta.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     {/* Personel Seçimi */}
-                    <div style={{ marginBottom: 'var(--space-xl)' }}>
-                        <h3 style={{ marginBottom: 'var(--space-md)', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
-                            👥 SERVİSTE ÇALIŞAN PERSONEL
+                    <div className="space-y-3">
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                            👥 Kapanış Ekibi
                         </h3>
 
-                        <div style={{
-                            padding: 'var(--space-sm)',
-                            background: 'var(--color-info)',
-                            borderRadius: 'var(--radius-sm)',
-                            fontSize: '0.75rem',
-                            color: 'white',
-                            marginBottom: 'var(--space-md)',
-                        }}>
-                            💡 Personeli seçin ve rolünü belirleyin. Sorumlu = rapor kalitesine göre, Destek = sabit baz puan.
+                        <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg text-xs text-blue-700 dark:text-blue-300">
+                            💡 Personeli seçin ve rolünü belirleyin.<br />
+                            <strong>Sorumlu:</strong> Rapor kalitesine göre puan.<br />
+                            <strong>Destek:</strong> Sabit baz puan.
                         </div>
 
-                        <div style={{ maxHeight: '250px', overflow: 'auto' }}>
+                        {/* Validation Error */}
+                        {validationError && (
+                            <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">
+                                {validationError}
+                            </div>
+                        )}
+
+                        <div className="max-h-[200px] overflow-auto space-y-1">
                             {personelSecimleri.map(p => (
                                 <div
                                     key={p.personnelId}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 'var(--space-sm)',
-                                        padding: 'var(--space-sm)',
-                                        background: p.secili ? 'var(--color-surface-elevated)' : 'transparent',
-                                        borderRadius: 'var(--radius-md)',
-                                        marginBottom: 'var(--space-xs)',
-                                        border: p.secili ? '1px solid var(--color-border)' : '1px solid transparent',
-                                    }}
+                                    className={`
+                                        flex items-center gap-3 p-3 rounded-lg transition-colors
+                                        ${p.secili
+                                            ? 'bg-muted border border-border'
+                                            : 'bg-transparent hover:bg-muted/50'
+                                        }
+                                    `}
                                 >
                                     {/* Checkbox */}
                                     <button
                                         onClick={() => toggleSecim(p.personnelId)}
-                                        style={{
-                                            width: '22px',
-                                            height: '22px',
-                                            borderRadius: '4px',
-                                            border: p.secili ? 'none' : '2px solid var(--color-border)',
-                                            background: p.secili ? 'var(--color-primary)' : 'transparent',
-                                            color: 'white',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: '0.8rem',
-                                            flexShrink: 0,
-                                        }}
+                                        className={`
+                                            w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-xs
+                                            ${p.secili
+                                                ? 'bg-primary text-primary-foreground'
+                                                : 'border-2 border-border'
+                                            }
+                                        `}
                                     >
                                         {p.secili && '✓'}
                                     </button>
 
                                     {/* Name & Unvan */}
-                                    <div style={{ flex: 1 }}>
-                                        <span style={{ fontWeight: 500 }}>{p.personnelAd}</span>
-                                        <span style={{
-                                            marginLeft: 'var(--space-xs)',
-                                            fontSize: '0.7rem',
-                                            color: 'var(--color-text-muted)',
-                                        }}>
-                                            {UNVAN_CONFIG[p.unvan].icon} {UNVAN_CONFIG[p.unvan].label}
+                                    <div className="flex-1">
+                                        <span className="font-medium">{p.personnelAd}</span>
+                                        <span className="ml-2 text-xs text-muted-foreground">
+                                            {UNVAN_CONFIG[p.unvan]?.icon} {UNVAN_CONFIG[p.unvan]?.label}
                                         </span>
                                     </div>
 
                                     {/* Role Selection */}
                                     {p.secili && (
-                                        <div style={{ display: 'flex', gap: '4px' }}>
+                                        <div className="flex gap-1">
                                             <button
                                                 onClick={() => setRol(p.personnelId, 'sorumlu')}
-                                                style={{
-                                                    padding: '2px 8px',
-                                                    fontSize: '0.7rem',
-                                                    fontWeight: 600,
-                                                    border: p.rol === 'sorumlu' ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                                                    borderRadius: 'var(--radius-sm)',
-                                                    background: p.rol === 'sorumlu' ? 'var(--color-primary)' : 'transparent',
-                                                    color: p.rol === 'sorumlu' ? 'white' : 'var(--color-text-muted)',
-                                                    cursor: 'pointer',
-                                                }}
+                                                className={`
+                                                    px-2 py-1 text-xs font-semibold rounded transition-colors
+                                                    ${p.rol === 'sorumlu'
+                                                        ? 'bg-primary text-primary-foreground'
+                                                        : 'border border-border text-muted-foreground hover:border-primary'
+                                                    }
+                                                `}
                                             >
                                                 Sorumlu
                                             </button>
                                             <button
                                                 onClick={() => setRol(p.personnelId, 'destek')}
-                                                style={{
-                                                    padding: '2px 8px',
-                                                    fontSize: '0.7rem',
-                                                    fontWeight: 600,
-                                                    border: p.rol === 'destek' ? '2px solid var(--color-success)' : '1px solid var(--color-border)',
-                                                    borderRadius: 'var(--radius-sm)',
-                                                    background: p.rol === 'destek' ? 'var(--color-success)' : 'transparent',
-                                                    color: p.rol === 'destek' ? 'white' : 'var(--color-text-muted)',
-                                                    cursor: 'pointer',
-                                                }}
+                                                className={`
+                                                    px-2 py-1 text-xs font-semibold rounded transition-colors
+                                                    ${p.rol === 'destek'
+                                                        ? 'bg-emerald-500 text-white'
+                                                        : 'border border-border text-muted-foreground hover:border-emerald-500'
+                                                    }
+                                                `}
                                             >
                                                 Destek
                                             </button>
@@ -294,89 +303,81 @@ export default function CompletionSidebar({ service, isOpen, onClose, onComplete
                                 </div>
                             ))}
                         </div>
-                    </div>
 
-                    {/* Rapor Kontrol Listesi */}
-                    <h3 style={{ marginBottom: 'var(--space-md)', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
-                        📋 RAPOR KONTROL LİSTESİ
-                    </h3>
-
-                    {raporAlanlari.map((alan) => {
-                        const key = alan.key as keyof KapanisRaporu;
-                        const isGerekli = gerekliAlanlar.includes(alan.key as any);
-                        const isChecked = rapor[key] === true;
-
-                        return (
-                            <div
-                                key={alan.key}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: 'var(--space-sm)',
-                                    padding: 'var(--space-sm)',
-                                    marginBottom: 'var(--space-xs)',
-                                    background: isGerekli ? 'var(--color-surface-elevated)' : 'transparent',
-                                    borderRadius: 'var(--radius-sm)',
-                                    opacity: isGerekli ? 1 : 0.4,
-                                }}
-                            >
-                                <button
-                                    onClick={() => isGerekli && setRapor({ ...rapor, [key]: !isChecked })}
-                                    disabled={!isGerekli}
-                                    style={{
-                                        width: '22px',
-                                        height: '22px',
-                                        borderRadius: '4px',
-                                        border: isChecked ? 'none' : '2px solid var(--color-border)',
-                                        background: isChecked ? 'var(--color-success)' : 'transparent',
-                                        color: 'white',
-                                        cursor: isGerekli ? 'pointer' : 'not-allowed',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '0.8rem',
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    {isChecked && '✓'}
-                                </button>
-                                <span style={{ flex: 1, fontSize: '0.85rem' }}>{alan.label}</span>
-                                {isGerekli && (
-                                    <span style={{ fontSize: '0.65rem', color: 'var(--color-error)', fontWeight: 600 }}>
-                                        ZORUNLU
-                                    </span>
-                                )}
-                            </div>
-                        );
-                    })}
-
-                    {/* Puan Önizleme */}
-                    <div style={{
-                        marginTop: 'var(--space-lg)',
-                        padding: 'var(--space-md)',
-                        background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%)',
-                        borderRadius: 'var(--radius-md)',
-                        color: 'white',
-                    }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ opacity: 0.9 }}>Rapor Başarı Oranı</span>
-                            <span style={{ fontSize: '1.5rem', fontWeight: 700 }}>%{Math.round(raporBasarisi * 100)}</span>
+                        {/* Team Summary */}
+                        <div className="flex items-center gap-4 text-sm">
+                            <span className="text-muted-foreground">Seçili:</span>
+                            <span className="font-semibold text-primary">
+                                👤 {sorumlular.length} Sorumlu
+                            </span>
+                            <span className="font-semibold text-emerald-600">
+                                🤝 {destekler.length} Destek
+                            </span>
                         </div>
                     </div>
 
-                    {/* Personel Puanları */}
+                    {/* Rapor Kontrol Listesi */}
+                    <div className="space-y-3">
+                        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                            📋 Rapor Kontrol Listesi
+                        </h3>
+
+                        <div className="space-y-1">
+                            {raporAlanlari.map((alan) => {
+                                const key = alan.key as keyof KapanisRaporu;
+                                const isGerekli = gerekliAlanlar.includes(alan.key as any);
+                                const isChecked = rapor[key] === true;
+
+                                return (
+                                    <div
+                                        key={alan.key}
+                                        className={`
+                                            flex items-center gap-3 p-2 rounded
+                                            ${isGerekli ? 'bg-muted' : 'opacity-40'}
+                                        `}
+                                    >
+                                        <button
+                                            onClick={() => isGerekli && setRapor({ ...rapor, [key]: !isChecked })}
+                                            disabled={!isGerekli}
+                                            className={`
+                                                w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-xs
+                                                ${isChecked
+                                                    ? 'bg-emerald-500 text-white'
+                                                    : 'border-2 border-border'
+                                                }
+                                                ${isGerekli ? 'cursor-pointer' : 'cursor-not-allowed'}
+                                            `}
+                                        >
+                                            {isChecked && '✓'}
+                                        </button>
+                                        <span className="flex-1 text-sm">{alan.label}</span>
+                                        {isGerekli && (
+                                            <span className="text-[10px] font-bold text-red-500">ZORUNLU</span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Rapor Başarı */}
+                    <div className="p-4 bg-gradient-to-r from-primary to-primary/80 rounded-xl text-white">
+                        <div className="flex justify-between items-center">
+                            <span className="opacity-90">Rapor Başarı Oranı</span>
+                            <span className="text-2xl font-bold">%{Math.round(raporBasarisi * 100)}</span>
+                        </div>
+                    </div>
+
+                    {/* Puan Önizleme */}
                     {seciliPersoneller.length > 0 && (
-                        <div style={{ marginTop: 'var(--space-lg)' }}>
-                            <h3 style={{ marginBottom: 'var(--space-sm)', fontSize: '0.9rem', color: 'var(--color-text-muted)' }}>
-                                💰 PUAN ÖNİZLEME
+                        <div className="space-y-3">
+                            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                                💰 Puan Önizleme
                             </h3>
 
-                            {/* Sorumlular */}
                             {sorumlular.length > 0 && (
-                                <div style={{ marginBottom: 'var(--space-md)' }}>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--color-primary-light)', marginBottom: 'var(--space-xs)', fontWeight: 600 }}>
-                                        SORUMLU (Rapor Kalitesine Göre)
-                                    </div>
+                                <div className="space-y-1">
+                                    <div className="text-xs font-semibold text-primary">SORUMLU (Rapor Kalitesine Göre)</div>
                                     {sorumlular.map((p) => {
                                         const puan = hesaplaBireyselPuan(raporBasarisi, service.isTuru, 'sorumlu', p.bonus);
                                         return (
@@ -393,12 +394,9 @@ export default function CompletionSidebar({ service, isOpen, onClose, onComplete
                                 </div>
                             )}
 
-                            {/* Destekler */}
                             {destekler.length > 0 && (
-                                <div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--color-success)', marginBottom: 'var(--space-xs)', fontWeight: 600 }}>
-                                        DESTEK (Sabit 80 Baz Puan)
-                                    </div>
+                                <div className="space-y-1">
+                                    <div className="text-xs font-semibold text-emerald-600">DESTEK (Sabit 80 Baz Puan)</div>
                                     {destekler.map((p) => {
                                         const puan = hesaplaBireyselPuan(1, service.isTuru, 'destek', p.bonus);
                                         return (
@@ -419,26 +417,23 @@ export default function CompletionSidebar({ service, isOpen, onClose, onComplete
                 </div>
 
                 {/* Footer */}
-                <div style={{
-                    padding: 'var(--space-lg)',
-                    borderTop: '1px solid var(--color-border)',
-                    display: 'flex',
-                    gap: 'var(--space-sm)',
-                }}>
-                    <button className="btn btn-secondary" onClick={onClose} style={{ flex: 1 }}>
-                        İptal
-                    </button>
-                    <button
-                        className="btn btn-success"
+                <DrawerFooter className="border-t border-border">
+                    <Button
                         onClick={handleComplete}
-                        style={{ flex: 2 }}
-                        disabled={seciliPersoneller.length === 0}
+                        disabled={!isValidTeam}
+                        className="w-full"
+                        size="lg"
                     >
                         ✓ Servisi Tamamla ({seciliPersoneller.length} personel)
-                    </button>
-                </div>
-            </div>
-        </>
+                    </Button>
+                    <DrawerClose asChild>
+                        <Button variant="secondary" className="w-full">
+                            İptal
+                        </Button>
+                    </DrawerClose>
+                </DrawerFooter>
+            </DrawerContent>
+        </Drawer>
     );
 }
 
@@ -457,44 +452,30 @@ function PuanCard({
     onToggleBonus: () => void;
 }) {
     return (
-        <div style={{
-            padding: 'var(--space-sm)',
-            background: 'var(--color-surface-elevated)',
-            borderRadius: 'var(--radius-md)',
-            marginBottom: 'var(--space-xs)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderLeft: `3px solid ${isSorumlu ? 'var(--color-primary)' : 'var(--color-success)'}`,
-        }}>
+        <div className={`
+            p-3 rounded-lg bg-muted flex items-center justify-between
+            ${isSorumlu ? 'border-l-4 border-l-primary' : 'border-l-4 border-l-emerald-500'}
+        `}>
             <div>
-                <div style={{ fontWeight: 500, fontSize: '0.85rem' }}>
-                    {UNVAN_CONFIG[personel.unvan].icon} {personel.personnelAd}
+                <div className="font-medium text-sm">
+                    {UNVAN_CONFIG[personel.unvan]?.icon} {personel.personnelAd}
                 </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
-                    {formula}
-                </div>
+                <div className="text-xs text-muted-foreground">{formula}</div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+            <div className="flex items-center gap-2">
                 <button
                     onClick={onToggleBonus}
-                    style={{
-                        padding: '2px 6px',
-                        fontSize: '0.65rem',
-                        border: personel.bonus ? '1px solid var(--color-accent-gold)' : '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-sm)',
-                        background: personel.bonus ? 'var(--color-accent-gold)' : 'transparent',
-                        color: personel.bonus ? 'black' : 'var(--color-text-muted)',
-                        cursor: 'pointer',
-                    }}
+                    className={`
+                        px-2 py-1 text-xs rounded transition-colors
+                        ${personel.bonus
+                            ? 'bg-amber-400 text-black'
+                            : 'border border-border text-muted-foreground hover:border-amber-400'
+                        }
+                    `}
                 >
                     ⭐ +15
                 </button>
-                <span style={{
-                    fontSize: '1.25rem',
-                    fontWeight: 700,
-                    color: isSorumlu ? 'var(--color-primary-light)' : 'var(--color-success)',
-                }}>
+                <span className={`text-xl font-bold ${isSorumlu ? 'text-primary' : 'text-emerald-600'}`}>
                     {puan.finalPuan}
                 </span>
             </div>
