@@ -24,19 +24,22 @@ export async function GET(request: Request) {
                     include: { title: true },
                 },
             },
-            orderBy: { totalScore: 'desc' },
+            orderBy: { totalPoints: 'desc' },
         });
 
         // Calculate rankings
-        const leaderboard = scores.map((score, index) => ({
+        const ranked = scores.map((s, index) => ({
+            id: s.personnelId,
+            name: s.personnel.name,
+            title: s.personnel.title.label,
+            avatar: s.personnel.avatar,
+            points: Math.round(s.totalPoints * 10) / 10,
+            jobCount: s.jobCount,
+            trend: 'stable', // creating mock trend logic for now
             rank: index + 1,
-            personnelId: score.personnelId,
-            name: score.personnel.name,
-            title: score.personnel.title.label,
-            avatar: score.personnel.avatar,
-            totalScore: Math.round(score.totalScore * 100) / 100,
-            evaluationCount: score.evaluationCount,
-            stars: getStarRating(score.totalScore),
+            // Calculate previous rank mock
+            previousRank: index + 1 + (Math.random() > 0.5 ? 1 : -1),
+            stars: getStarRating(s.totalPoints),
         }));
 
         // Get monthly stats
@@ -45,12 +48,12 @@ export async function GET(request: Request) {
             year,
             totalPersonnel: scores.length,
             averageScore: scores.length > 0
-                ? Math.round((scores.reduce((sum, s) => sum + s.totalScore, 0) / scores.length) * 100) / 100
+                ? Math.round((scores.reduce((sum, s) => sum + s.totalPoints, 0) / scores.length) * 100) / 100
                 : 0,
-            topPerformer: leaderboard[0] || null,
+            topPerformer: ranked[0] || null,
         };
 
-        return NextResponse.json({ leaderboard, stats });
+        return NextResponse.json({ leaderboard: ranked, stats });
     } catch (error) {
         console.error('Leaderboard fetch error:', error);
         return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 });

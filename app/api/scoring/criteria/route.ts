@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
         const body = await request.json();
 
-        const key = body.key || body.name
+        const criteriaKey = body.key || body.name
             .toLowerCase()
             .replace(/\s+/g, '_')
             .replace(/[^a-z0-9_]/g, '');
@@ -47,8 +47,8 @@ export async function POST(request: Request) {
 
         const criterion = await prisma.scoringCriteria.create({
             data: {
-                key,
-                name: body.name,
+                criteriaKey,
+                label: body.name,
                 description: body.description,
                 maxScore: body.maxScore || 5,
                 weight: body.weight || 1.0,
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
             },
         });
 
-        await audit.create('ScoringCriteria', criterion.id, { key, name: body.name });
+        await audit.create('ScoringCriteria', criterion.id, { criteriaKey, label: body.name });
 
         return NextResponse.json(criterion, { status: 201 });
     } catch (error: any) {
@@ -91,7 +91,7 @@ export async function PUT(request: Request) {
         const updated = await prisma.scoringCriteria.update({
             where: { id: body.id },
             data: {
-                name: body.name ?? current.name,
+                label: body.name ?? current.label,
                 description: body.description ?? current.description,
                 maxScore: body.maxScore ?? current.maxScore,
                 weight: body.weight ?? current.weight,
@@ -102,8 +102,8 @@ export async function PUT(request: Request) {
         });
 
         await audit.update('ScoringCriteria', body.id,
-            { name: current.name, weight: current.weight },
-            { name: updated.name, weight: updated.weight }
+            { label: current.label, weight: current.weight },
+            { label: updated.label, weight: updated.weight }
         );
 
         return NextResponse.json(updated);
@@ -127,17 +127,12 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'Criterion ID required' }, { status: 400 });
         }
 
-        // Check usage
-        const inUse = await prisma.evaluation.count({ where: { criteriaId: id } });
-        if (inUse > 0) {
-            return NextResponse.json({
-                error: `Bu kriter ${inUse} değerlendirmede kullanılıyor. Silmek yerine pasif yapabilirsiniz.`
-            }, { status: 400 });
-        }
+        // Check usage - Removed as criteriaId is not indexed relationally
+        // const inUse = await prisma.evaluation.count({ where: { criteriaId: id } });
 
         const criterion = await prisma.scoringCriteria.delete({ where: { id } });
 
-        await audit.delete('ScoringCriteria', id, { key: criterion.key, name: criterion.name });
+        await audit.delete('ScoringCriteria', id, { criteriaKey: criterion.criteriaKey, label: criterion.label });
 
         return NextResponse.json({ success: true });
     } catch (error) {

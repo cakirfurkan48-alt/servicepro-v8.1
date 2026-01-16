@@ -89,7 +89,9 @@ export function hesaplaYetkiliPuani(
     });
 
     // 6. soru (Genel Performans)
-    const genelYanit = sorular.genelSahaPerformansi;
+    const genelYanit = (isUsta
+        ? (sorular as any).genelLiderlik
+        : (sorular as any).ogrenmeGelisim) as PerformansYanit;
     const genelPuan = PERFORMANS_PUANLARI[genelYanit];
     const genelAgirlik = isUsta ? GENEL_PERFORMANS_SORULARI.ustaAgirlik : GENEL_PERFORMANS_SORULARI.cirakAgirlik;
 

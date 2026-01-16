@@ -99,7 +99,7 @@ export default function Sidebar() {
                         onClick={logout}
                         className="sidebar-logout-btn"
                     >
-                        <Icon name="SignOut" size="sm" />
+                        <Icon name="logout" size="sm" />
                         Çıkış
                     </button>
                 </div>

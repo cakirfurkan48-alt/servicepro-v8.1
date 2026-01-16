@@ -110,7 +110,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
                 </div>
                 <div className="glass-card p-4 flex items-center gap-4">
                     <div className="p-3 bg-violet-500/10 rounded-xl text-violet-500">
-                        <Icon name="wrench" size="lg" />
+                        <Icon name="service" size="lg" />
                     </div>
                     <div>
                         <div className="text-sm text-text-muted">İşçilik</div>
@@ -139,8 +139,8 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === tab
-                                        ? 'bg-primary text-white shadow-md'
-                                        : 'text-text-muted hover:text-text hover:bg-surface/50'
+                                    ? 'bg-primary text-white shadow-md'
+                                    : 'text-text-muted hover:text-text hover:bg-surface/50'
                                     }`}
                             >
                                 {tab === 'overview' && 'Genel Bakış'}
@@ -258,7 +258,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
                         <div className="space-y-4">
                             <div>
                                 <label className="text-xs font-semibold text-text-muted uppercase tracking-wider block mb-2">Mevcut Durum</label>
-                                <select className="w-full bg-surface border border-border rounded-lg p-2.5 text-text focus:border-primary outline-none">
+                                <select aria-label="Mevcut Durum" className="w-full bg-surface border border-border rounded-lg p-2.5 text-text focus:border-primary outline-none">
                                     <option value="pending">Bekliyor</option>
                                     <option value="inProgress">İşlemde</option>
                                     <option value="completed">Tamamlandı</option>

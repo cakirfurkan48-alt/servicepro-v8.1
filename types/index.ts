@@ -141,65 +141,75 @@ export interface SoruConfig {
     key: string;
     label: string;
     aciklama: string;
+    ustaAgirlik: number;
+    cirakAgirlik: number;
 }
 
-// USTA SORULARI (6 soru)
-export const USTA_SORULARI: SoruConfig[] = [
+export const DEGERLENDIRME_SORULARI: SoruConfig[] = [
     {
         key: 'uniformaVeIsg',
         label: 'Üniforma ve İSG Uyumu',
-        aciklama: 'Personel iş güvenliği ekipmanlarını (KKD) kullandı mı? Üniforma temiz ve düzgün müydü?'
+        aciklama: 'KKD kullanımı ve kılık kıyafet düzeni.',
+        ustaAgirlik: 10,
+        cirakAgirlik: 15
     },
     {
         key: 'musteriIletisimi',
         label: 'Müşteri İletişim Kalitesi',
-        aciklama: 'Müşterilerle profesyonel ve saygılı iletişim kurdu mu? Şikayet aldı mı?'
+        aciklama: 'Müşteri ile iletişim ve şikayet durumu.',
+        ustaAgirlik: 15,
+        cirakAgirlik: 10
     },
     {
         key: 'planlamaKoordinasyon',
         label: 'Planlama ve Koordinasyon',
-        aciklama: 'İş planına uydu mu? Değişiklikleri zamanında bildirdi mi?'
+        aciklama: 'İş planına uyum ve koordinasyon.',
+        ustaAgirlik: 20,
+        cirakAgirlik: 15
     },
     {
         key: 'teknikTespit',
         label: 'Teknik Tespit Yeteneği',
-        aciklama: 'Arızaları ve ek iş ihtiyaçlarını doğru tespit edebildi mi?'
+        aciklama: 'Doğru arıza tespiti ve çözüm önerisi.',
+        ustaAgirlik: 25,
+        cirakAgirlik: 15
     },
     {
         key: 'raporDokumantasyon',
         label: 'Rapor ve Dokümantasyon',
-        aciklama: 'İş raporlarını eksiksiz ve zamanında teslim etti mi?'
+        aciklama: 'Raporların zamanında ve eksiksiz girilmesi.',
+        ustaAgirlik: 15,
+        cirakAgirlik: 20
     },
     {
-        key: 'genelLiderlik',
-        label: 'Genel Liderlik',
-        aciklama: 'Ekibini yönetti mi? Çıraklara rehberlik etti mi? Sorumluluk aldı mı?'
-    },
+        key: 'genelLiderlik', // Usta için
+        label: 'Genel Liderlik / Öğrenme', // Çırak için Öğrenme
+        aciklama: 'Liderlik vasıfları veya öğrenme isteği.',
+        ustaAgirlik: 15,
+        cirakAgirlik: 25
+    }
 ];
 
-// ÇIRAK SORULARI (4 soru)
-export const CIRAK_SORULARI: SoruConfig[] = [
-    {
-        key: 'uniformaVeIsg',
-        label: 'Üniforma ve İSG Uyumu',
-        aciklama: 'Personel iş güvenliği ekipmanlarını (KKD) kullandı mı? Üniforma temiz ve düzgün müydü?'
-    },
-    {
-        key: 'ekipIciDavranis',
-        label: 'Ekip İçi Davranış',
-        aciklama: 'Ekip arkadaşlarıyla uyumlu çalıştı mı? Çatışma veya tutum problemi var mıydı?'
-    },
-    {
-        key: 'destekKalitesi',
-        label: 'Ustalara Destek Kalitesi',
-        aciklama: 'Ustalara verilen görevlerde yardımcı oldu mu? Talimatlara uydu mu?'
-    },
-    {
-        key: 'ogrenmeGelisim',
-        label: 'Öğrenme İsteği ve Gelişim',
-        aciklama: 'Bu ay yeni bir şey öğrendi mi? Soru sordu mu? İlerleme kaydetti mi?'
-    },
-];
+export const GENEL_PERFORMANS_SORULARI = {
+    key: 'genelSahaPerformansi',
+    label: 'Genel Saha Performansı',
+    ustaAgirlik: 0, // Dahil edildi
+    cirakAgirlik: 0
+};
+
+
+export type PerformansYanit = 'BEKLENTININ_ALTINDA' | 'BEKLENTIYI_KARSILIYOR' | 'BEKLENTININ_UZERINDE' | 'MUKEMMEL';
+
+export const PERFORMANS_PUANLARI: Record<PerformansYanit, number> = {
+    BEKLENTININ_ALTINDA: 50,
+    BEKLENTIYI_KARSILIYOR: 80,
+    BEKLENTININ_UZERINDE: 100,
+    MUKEMMEL: 120
+};
+
+// Legacy Arrays (Kept for compatibility references if needed, but logic uses master list above)
+export const USTA_SORULARI = DEGERLENDIRME_SORULARI;
+export const CIRAK_SORULARI = DEGERLENDIRME_SORULARI;
 
 // ==================== İSMAİL ÇOBAN DEĞERLENDİRMESİ ====================
 
@@ -252,6 +262,8 @@ export interface YetkiliDegerlendirmesiCirak {
     };
     toplamPuan: number;
 }
+
+export type YetkiliDegerlendirmesi = YetkiliDegerlendirmesiUsta | YetkiliDegerlendirmesiCirak;
 
 // Bireysel Servis Puanı
 export interface ServisPuani {
@@ -336,3 +348,15 @@ export const TUM_PERSONEL: Personnel[] = [
     { id: '16', ad: 'Ahmet Demir', rol: 'teknisyen', unvan: 'usta', aktif: true },
     { id: '17', ad: 'Mustafa Yıldız', rol: 'teknisyen', unvan: 'cirak', aktif: true },
 ];
+// ==================== LEGACY SCORING (Google Sheets) ====================
+export interface ServiceScore {
+    id: string;
+    serviceId: string;
+    personnelId: string;
+    musteriMemnuniyeti: 1 | 2 | 3 | 4 | 5;
+    raporlamaKalitesi: 1 | 2 | 3 | 4 | 5;
+    takimIsBirligi: 1 | 2 | 3 | 4 | 5;
+    toplamPuan: number;
+    notlar?: string;
+    tarih: string;
+}

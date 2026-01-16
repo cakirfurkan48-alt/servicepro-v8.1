@@ -1,0 +1,28 @@
+{
+  "konumlar": {
+    "yatmarin": {
+      "label": "Yatmarın (Merkez)"
+    },
+    "netsel": {
+      "label": "Netsel"
+    },
+    "dis_servis": {
+      "label": "Dış Servis"
+    }
+  },
+  "durumlar": {
+    "devam_ediyor": {
+      "label": "Devam Ediyor"
+    },
+    "parca_bekliyor": {
+      "label": "Parça Bekliyor"
+    },
+    "tamamlandi": {
+      "label": "Tamamlandı"
+    }
+  },
+  "genel": {
+    "sirket_adi": "ServicePRO",
+    "slogan": "Tekne Teknik Servis Takip Sistemi"
+  }
+}

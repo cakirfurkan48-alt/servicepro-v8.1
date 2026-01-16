@@ -127,7 +127,7 @@ export default function AuditPage() {
                     </select>
 
                     <button className="btn btn-secondary" onClick={() => fetchLogs(1)}>
-                        <Icon name="ArrowsClockwise" size="md" />
+                        <Icon name="arrowsClockwise" size="md" />
                         Yenile
                     </button>
                 </div>
@@ -137,7 +137,7 @@ export default function AuditPage() {
             <div className="card">
                 {loading ? (
                     <div className="loading-container">
-                        <Icon name="Spinner" size="xl" className="loading-icon animate-spin" />
+                        <Icon name="spinner" size="xl" className="loading-icon animate-spin" />
                         <p>Yükleniyor...</p>
                     </div>
                 ) : (
@@ -173,7 +173,7 @@ export default function AuditPage() {
                                             <td>{log.user?.name || 'Sistem'}</td>
                                             <td className="text-center">
                                                 <button className="expand-btn">
-                                                    <Icon name={expandedLog === log.id ? 'CaretUp' : 'CaretDown'} size="sm" />
+                                                    <Icon name={expandedLog === log.id ? 'caretUp' : 'caretDown'} size="sm" />
                                                 </button>
                                             </td>
                                         </tr>
@@ -216,7 +216,7 @@ export default function AuditPage() {
                                     disabled={pagination.page === 1}
                                     onClick={() => fetchLogs(pagination.page - 1)}
                                 >
-                                    <Icon name="CaretLeft" size="sm" />
+                                    <Icon name="caretLeft" size="sm" />
                                     Önceki
                                 </button>
                                 <span>
@@ -228,7 +228,7 @@ export default function AuditPage() {
                                     onClick={() => fetchLogs(pagination.page + 1)}
                                 >
                                     Sonraki
-                                    <Icon name="CaretRight" size="sm" />
+                                    <Icon name="caretRight" size="sm" />
                                 </button>
                             </div>
                         )}

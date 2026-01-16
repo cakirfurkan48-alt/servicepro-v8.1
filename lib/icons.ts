@@ -43,6 +43,7 @@ export const APP_ICONS = {
     sort: 'sort-ascending',
     clipboardText: 'clipboard-text',
     bell: 'bell',
+    arrowsClockwise: 'arrows-clockwise',
 
     // Status
     success: 'check-circle',
@@ -70,6 +71,9 @@ export const APP_ICONS = {
     inProgress: 'play-circle',
     completed: 'check-circle',
     caretRight: 'caret-right',
+    caretLeft: 'caret-left',
+    caretUp: 'caret-up',
+    caretDown: 'caret-down',
     mapPin: 'map-pin',
     coffee: 'coffee',
 
@@ -181,5 +185,33 @@ export const EMOJI_FALLBACKS: Record<IconName, string> = {
     spinner: '⏳',
     arrowRight: '➡️',
     warningCircle: '⚠️',
+
+    // Missing Fallbacks
+    printer: '🖨️',
+    export: '📤',
+    image: '🖼️',
+    user: '👤',
+    caretLeft: '⬅️',
+    caretUp: '⬆️',
+    caretDown: '⬇️',
+    pencil: '✏️',
+    creditCard: '💳',
+    workflow: '🔀',
+    formBuilder: '📝',
+    audit: '📋',
+    chevronRight: '➡️',
+    chevronDown: '⬇️',
+    chevronUp: '⬆️',
+    close: '❌',
+    more: '...',
+    logout: '🚪',
+    theme: '🎨',
+    sun: '☀️',
+    moon: '🌙',
+    arrowsClockwise: '🔄',
+    chartBar: '📊',
+    service: '🔧',
+    parts: '⚙️',
+    evaluation: '⭐',
 } as const;
 

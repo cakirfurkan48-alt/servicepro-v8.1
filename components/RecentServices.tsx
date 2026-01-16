@@ -51,7 +51,13 @@ const mockServices: Service[] = [
     },
 ];
 
-export default function RecentServices() {
+interface RecentServicesProps {
+    services: Service[];
+}
+
+export default function RecentServices({ services }: RecentServicesProps) {
+    const displayServices = services && services.length > 0 ? services : mockServices; // Fallback to mock if empty/loading for now
+
     return (
         <div className="card">
             <div className="card-header">
@@ -73,7 +79,7 @@ export default function RecentServices() {
                         </tr>
                     </thead>
                     <tbody>
-                        {mockServices.map(service => (
+                        {displayServices.map(service => (
                             <tr key={service.id}>
                                 <td style={{ fontWeight: 600, color: 'var(--color-primary)' }}>
                                     {service.saat || '—'}

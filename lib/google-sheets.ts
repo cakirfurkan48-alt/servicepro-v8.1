@@ -48,10 +48,9 @@ export async function getAllServices(): Promise<Service[]> {
         servisAciklamasi: row[6] || '',
         irtibatKisi: row[7] || undefined,
         telefon: row[8] || undefined,
-        durum: (row[9] as Service['durum']) || 'BEKLEMEDE',
-        kapanisDurumu: row[10] || undefined,
-        kapanisId: row[11] || undefined,
-        kapanisYapan: row[12] || undefined,
+        durum: (row[9] as Service['durum']) || 'RANDEVU_VERILDI',
+        isTuru: 'paket', // Default to paket
+        atananPersonel: [], // Default to empty
     }));
 }
 
@@ -83,9 +82,6 @@ export async function addService(service: Omit<Service, 'id'>): Promise<string> 
                 service.irtibatKisi || '',
                 service.telefon || '',
                 service.durum,
-                service.kapanisDurumu || '',
-                service.kapanisId || '',
-                service.kapanisYapan || '',
             ]],
         },
     });
@@ -120,9 +116,6 @@ export async function updateService(id: string, updates: Partial<Service>): Prom
                 updatedService.irtibatKisi || '',
                 updatedService.telefon || '',
                 updatedService.durum,
-                updatedService.kapanisDurumu || '',
-                updatedService.kapanisId || '',
-                updatedService.kapanisYapan || '',
             ]],
         },
     });
@@ -148,6 +141,7 @@ export async function getAllPersonnel(): Promise<Personnel[]> {
         ad: row[0] || '',
         aktif: true,
         rol: 'teknisyen' as const,
+        unvan: 'usta' as const, // Default to usta
     }));
 }
 

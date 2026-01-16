@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         );
 
         // Get target statuses info
-        const targetStatusKeys = [...new Set(allowedTransitions.map(t => t.toStatusKey))];
+        const targetStatusKeys = Array.from(new Set(allowedTransitions.map(t => t.toStatusKey)));
         const targetStatuses = await prisma.configStatus.findMany({
             where: { key: { in: targetStatusKeys } },
         });
