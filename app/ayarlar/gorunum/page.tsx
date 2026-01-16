@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAdmin } from '@/lib/admin-context';
+import { useTheme } from '@/components/ThemeProvider';
 import ColorPicker from '@/components/cms/ColorPicker';
 
 interface ThemeConfig {
@@ -51,6 +52,7 @@ const fontOptions = [
 
 export default function GorunumPage() {
     const { isAdmin } = useAdmin();
+    const { refreshTheme } = useTheme();
     const [appearance, setAppearance] = useState<AppearanceConfig | null>(null);
     const [activeTab, setActiveTab] = useState<'theme' | 'typography' | 'layout' | 'branding'>('theme');
     const [saving, setSaving] = useState(false);
@@ -79,6 +81,7 @@ export default function GorunumPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ appearance }),
             });
+            await refreshTheme(); // Applies changes instantly
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
         } catch (error) {

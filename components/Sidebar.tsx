@@ -3,63 +3,50 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAdmin } from '@/lib/admin-context';
+import { Icon } from '@/components/Icon';
+import { useEffect, useState } from 'react';
 
-interface NavItem {
-    href: string;
-    label: string;
-    icon: string;
-    adminOnly?: boolean;
-}
-
-interface NavSection {
-    title: string;
-    items: NavItem[];
-}
-
-const navSections: NavSection[] = [
-    {
-        title: 'Ana Sayfa',
-        items: [
-            { href: '/', label: 'Dashboard', icon: '📊' },
-        ],
-    },
-    {
-        title: 'Operasyon',
-        items: [
-            { href: '/planlama', label: 'Servis Planlama', icon: '📅' },
-            { href: '/personel', label: 'Personel Yönetimi', icon: '👥' },
-        ],
-    },
-    {
-        title: 'Performans',
-        items: [
-            { href: '/puanlama', label: 'Marlin Yıldızı', icon: '⭐' },
-            { href: '/puanlama/gecmis', label: 'Geçmiş & Klasman', icon: '🏆' },
-            { href: '/deger', label: 'Aylık Değerlendirme', icon: '📝' },
-        ],
-    },
-    {
-        title: 'Raporlar',
-        items: [
-            { href: '/raporlar/whatsapp', label: 'WhatsApp Rapor', icon: '📤' },
-        ],
-    },
-    {
-        title: 'Yönetim',
-        items: [
-            { href: '/ayarlar', label: 'Ayarlar', icon: '⚙️', adminOnly: true },
-        ],
-    },
-];
+// Default Fallback Menu
+const defaultMenu = {
+    sidebar: [
+        { id: '1', href: '/', label: 'Dashboard', icon: 'ChartPieSlice', visible: true },
+        { id: '2', href: '/planlama', label: 'Servis Planlama', icon: 'CalendarCheck', visible: true },
+        { id: '3', href: '/personel', label: 'Personel Yönetimi', icon: 'Users', visible: true },
+        { id: '4', href: '/puanlama', label: 'Marlin Yıldızı', icon: 'Star', visible: true },
+        { id: '5', href: '/puanlama/gecmis', label: 'Geçmiş & Klasman', icon: 'Trophy', visible: true },
+        { id: '6', href: '/deger', label: 'Aylık Değerlendirme', icon: 'Notepad', visible: true },
+        { id: '7', href: '/raporlar/whatsapp', label: 'WhatsApp Rapor', icon: 'WhatsappLogo', visible: true },
+        { id: '8', href: '/ayarlar', label: 'Ayarlar', icon: 'Gear', visible: true, adminOnly: true },
+    ]
+};
 
 export default function Sidebar() {
     const pathname = usePathname();
     const { user, isAdmin, logout, isLoggedIn } = useAdmin();
+    const [menuItems, setMenuItems] = useState(defaultMenu.sidebar);
 
     // Don't show sidebar on login page
     if (pathname === '/login') {
         return null;
     }
+
+    useEffect(() => {
+        loadMenu();
+    }, []);
+
+    const loadMenu = async () => {
+        try {
+            const res = await fetch('/api/config?section=menu');
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.sidebar) {
+                    setMenuItems(data.sidebar);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load menu:', error);
+        }
+    };
 
     return (
         <aside className="sidebar">
@@ -69,33 +56,25 @@ export default function Sidebar() {
             </div>
 
             <nav className="sidebar-nav">
-                {navSections.map((section) => {
-                    // Filter items based on user role
-                    const visibleItems = section.items.filter(item =>
-                        !item.adminOnly || isAdmin
-                    );
+                {menuItems.map((item) => {
+                    // Filter items based on user role and visibility
+                    if (!item.visible) return null;
+                    if (item.adminOnly && !isAdmin) return null;
 
-                    if (visibleItems.length === 0) return null;
+                    const isActive = pathname === item.href ||
+                        (item.href !== '/' && pathname.startsWith(item.href));
 
                     return (
-                        <div key={section.title} className="sidebar-section">
-                            <div className="sidebar-section-title">{section.title}</div>
-                            {visibleItems.map((item) => {
-                                const isActive = pathname === item.href ||
-                                    (item.href !== '/' && pathname.startsWith(item.href));
-
-                                return (
-                                    <Link
-                                        key={item.href}
-                                        href={item.href}
-                                        className={`sidebar-link ${isActive ? 'active' : ''}`}
-                                    >
-                                        <span className="sidebar-icon">{item.icon}</span>
-                                        <span>{item.label}</span>
-                                    </Link>
-                                );
-                            })}
-                        </div>
+                        <Link
+                            key={item.id}
+                            href={item.href}
+                            className={`sidebar-link ${isActive ? 'active' : ''}`}
+                        >
+                            <span className="sidebar-icon">
+                                <Icon name={item.icon as any} size="md" />
+                            </span>
+                            <span>{item.label}</span>
+                        </Link>
                     );
                 })}
             </nav>
@@ -120,7 +99,8 @@ export default function Sidebar() {
                         onClick={logout}
                         className="sidebar-logout-btn"
                     >
-                        🚪 Çıkış
+                        <Icon name="SignOut" size="sm" />
+                        Çıkış
                     </button>
                 </div>
             )}

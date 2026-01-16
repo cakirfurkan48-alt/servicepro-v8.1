@@ -1,0 +1,435 @@
+// prisma/schema.prisma
+// ServicePRO Enterprise Database Schema
+// Version: 9.0
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTH & USERS (NextAuth.js compatible)
+// ═══════════════════════════════════════════════════════════
+
+enum Role {
+  ADMIN
+  COORDINATOR
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String?   // For credentials login (hashed)
+  image         String?
+  role          Role      @default(COORDINATOR)
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  auditLogs     AuditLog[]
+  sessions      Session[]
+  accounts      Account[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  
+  @@unique([identifier, token])
+}
+
+// ═══════════════════════════════════════════════════════════
+// CORE ENTITIES
+// ═══════════════════════════════════════════════════════════
+
+model Personnel {
+  id          String   @id @default(cuid())
+  name        String
+  titleId     String
+  phone       String?
+  email       String?
+  avatar      String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  title               ConfigPersonnelTitle @relation(fields: [titleId], references: [id])
+  servicesResponsible Service[] @relation("ResponsiblePersonnel")
+  servicesSupport     ServiceSupport[]
+  evaluations         Evaluation[]
+  starScores          StarScore[]
+}
+
+model Boat {
+  id          String   @id @default(cuid())
+  name        String
+  ownerName   String?
+  ownerPhone  String?
+  ownerEmail  String?
+  notes       String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  services    Service[]
+}
+
+model Service {
+  id              String    @id @default(cuid())
+  code            String    @unique // SRV-2026-0001
+  
+  // Core relations
+  boatId          String?
+  locationId      String
+  statusId        String
+  jobTypeId       String
+  
+  // Details
+  boatName        String    // Denormalized for quick access
+  description     String    @db.Text
+  contactPerson   String?
+  contactPhone    String?
+  address         String?
+  
+  // Scheduling
+  scheduledDate   DateTime
+  scheduledTime   String?
+  completedAt     DateTime?
+  
+  // Personnel
+  responsibleId   String?
+  
+  // Custom fields (dynamic from FormBuilder)
+  customFields    Json?     @default("{}")
+  
+  // Metadata
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  createdById     String?
+  
+  // Relations
+  boat            Boat?     @relation(fields: [boatId], references: [id])
+  location        ConfigLocation @relation(fields: [locationId], references: [id])
+  status          ConfigStatus @relation(fields: [statusId], references: [id])
+  jobType         ConfigJobType @relation(fields: [jobTypeId], references: [id])
+  responsible     Personnel? @relation("ResponsiblePersonnel", fields: [responsibleId], references: [id])
+  supportTeam     ServiceSupport[]
+  parts           ServicePart[]
+  statusHistory   StatusHistory[]
+  evaluations     Evaluation[]
+  
+  @@index([scheduledDate])
+  @@index([statusId])
+  @@index([locationId])
+  @@index([boatName])
+}
+
+model ServiceSupport {
+  id          String    @id @default(cuid())
+  serviceId   String
+  personnelId String
+  role        String    @default("support")
+  
+  service     Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  personnel   Personnel @relation(fields: [personnelId], references: [id])
+  
+  @@unique([serviceId, personnelId])
+}
+
+model ServicePart {
+  id          String    @id @default(cuid())
+  serviceId   String
+  partName    String
+  quantity    Int       @default(1)
+  status      String    @default("NEEDED")
+  notes       String?
+  orderedAt   DateTime?
+  receivedAt  DateTime?
+  
+  service     Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+model StatusHistory {
+  id          String   @id @default(cuid())
+  serviceId   String
+  fromStatusId String?
+  toStatusId   String
+  changedById String?
+  changedAt   DateTime @default(now())
+  notes       String?
+  
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  
+  @@index([serviceId])
+}
+
+// ═══════════════════════════════════════════════════════════
+// MARLIN YILDIZI (STAR SCORING)
+// ═══════════════════════════════════════════════════════════
+
+model Evaluation {
+  id            String    @id @default(cuid())
+  serviceId     String
+  personnelId   String
+  evaluatorId   String?
+  
+  // Scores (JSON: { criteriaId: { score, evidence?, skipped } })
+  scores        Json
+  totalScore    Float
+  
+  // Override capability
+  overridden    Boolean   @default(false)
+  overrideScore Float?
+  overrideNote  String?
+  overriddenBy  String?
+  overriddenAt  DateTime?
+  
+  createdAt     DateTime  @default(now())
+  
+  service       Service   @relation(fields: [serviceId], references: [id])
+  personnel     Personnel @relation(fields: [personnelId], references: [id])
+  
+  @@index([personnelId])
+  @@index([serviceId])
+}
+
+model StarScore {
+  id            String   @id @default(cuid())
+  personnelId   String
+  month         Int
+  year          Int
+  totalPoints   Float
+  jobCount      Int
+  avgScore      Float
+  rank          Int?
+  
+  personnel     Personnel @relation(fields: [personnelId], references: [id])
+  
+  @@unique([personnelId, month, year])
+}
+
+// ═══════════════════════════════════════════════════════════
+// CMS: CONFIGURATION TABLES
+// ═══════════════════════════════════════════════════════════
+
+model ConfigStatus {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  label       String
+  color       String    @default("#6366f1")
+  icon        String?
+  sortOrder   Int       @default(0)
+  active      Boolean   @default(true)
+  
+  // Relations
+  services    Service[]
+}
+
+model ConfigLocation {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  label       String
+  color       String    @default("#0ea5e9")
+  icon        String?
+  sortOrder   Int       @default(0)
+  active      Boolean   @default(true)
+  
+  // Relations
+  services    Service[]
+}
+
+model ConfigJobType {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  label       String
+  multiplier  Float     @default(1.0)
+  sortOrder   Int       @default(0)
+  active      Boolean   @default(true)
+  
+  // Relations
+  services    Service[]
+}
+
+model ConfigPersonnelTitle {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  label       String
+  level       Int       @default(1)
+  sortOrder   Int       @default(0)
+  active      Boolean   @default(true)
+  
+  // Relations
+  personnel   Personnel[]
+}
+
+// ═══════════════════════════════════════════════════════════
+// CMS: FORM BUILDER
+// ═══════════════════════════════════════════════════════════
+
+enum FieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  DATE
+  DATETIME
+  SELECT
+  MULTISELECT
+  CHECKBOX
+  RADIO
+  FILE
+}
+
+model FormField {
+  id            String    @id @default(cuid())
+  formType      String    @default("service")
+  fieldKey      String
+  label         String
+  type          FieldType
+  placeholder   String?
+  helpText      String?
+  defaultValue  String?
+  options       Json?
+  validation    Json?
+  sortOrder     Int       @default(0)
+  active        Boolean   @default(true)
+  visibleTo     String[]  @default(["ADMIN", "COORDINATOR"])
+  editableBy    String[]  @default(["ADMIN", "COORDINATOR"])
+  
+  @@unique([formType, fieldKey])
+}
+
+// ═══════════════════════════════════════════════════════════
+// CMS: WORKFLOW ENGINE
+// ═══════════════════════════════════════════════════════════
+
+model WorkflowTransition {
+  id            String   @id @default(cuid())
+  fromStatusKey String
+  toStatusKey   String
+  allowedRoles  String[] @default(["ADMIN", "COORDINATOR"])
+  requiresNote  Boolean  @default(false)
+  requiresParts Boolean  @default(false)
+  autoActions   Json?
+  active        Boolean  @default(true)
+  
+  @@unique([fromStatusKey, toStatusKey])
+}
+
+// ═══════════════════════════════════════════════════════════
+// CMS: THEME & MENU
+// ═══════════════════════════════════════════════════════════
+
+model AppConfig {
+  id            String   @id @default("main")
+  
+  // Branding
+  appName       String   @default("ServicePRO")
+  slogan        String?
+  logoUrl       String?
+  faviconUrl    String?
+  
+  // Theme
+  primaryColor  String   @default("#0ea5e9")
+  secondaryColor String  @default("#6366f1")
+  themeMode     String   @default("dark")
+  
+  // Typography
+  fontFamily    String   @default("Inter")
+  baseFontSize  Int      @default(16)
+  
+  // Layout
+  borderRadius  Int      @default(10)
+  sidebarWidth  Int      @default(260)
+  
+  updatedAt     DateTime @updatedAt
+}
+
+model MenuItem {
+  id          String   @id @default(cuid())
+  parentId    String?
+  href        String
+  label       String
+  icon        String?
+  sortOrder   Int      @default(0)
+  visible     Boolean  @default(true)
+  adminOnly   Boolean  @default(false)
+  
+  parent      MenuItem?  @relation("MenuHierarchy", fields: [parentId], references: [id])
+  children    MenuItem[] @relation("MenuHierarchy")
+}
+
+// ═══════════════════════════════════════════════════════════
+// CMS: SCORING CRITERIA
+// ═══════════════════════════════════════════════════════════
+
+model ScoringCriteria {
+  id              String   @id @default(cuid())
+  category        String
+  criteriaKey     String   @unique
+  label           String
+  description     String?
+  maxScore        Int      @default(5)
+  weight          Float    @default(1.0)
+  applicableTo    String[] @default(["responsible", "support"])
+  requireEvidence Boolean  @default(false)
+  evidenceType    String?
+  sortOrder       Int      @default(0)
+  active          Boolean  @default(true)
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUDIT LOG
+// ═══════════════════════════════════════════════════════════
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  entity      String
+  entityId    String?
+  oldValue    Json?
+  newValue    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  
+  user        User?    @relation(fields: [userId], references: [id])
+  
+  @@index([entity, entityId])
+  @@index([userId])
+  @@index([createdAt])
+}

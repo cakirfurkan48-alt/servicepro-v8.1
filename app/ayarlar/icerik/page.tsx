@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAdmin } from '@/lib/admin-context';
+import IconPicker from '@/components/cms/IconPicker';
+import { Icon } from '@/components/Icon';
 
 interface Location {
     id: string;
@@ -36,8 +38,6 @@ interface ContentConfig {
     serviceTypes: ServiceType[];
     personnelTitles: PersonnelTitle[];
 }
-
-const emojiList = ['📍', '🏝️', '⚓', '🚗', '🏠', '🚢', '⛵', '🛥️', '📅', '🔧', '📦', '⏳', '📝', '🔍', '✅', '❌', '⭐', '🏆'];
 
 export default function IcerikPage() {
     const { isAdmin } = useAdmin();
@@ -84,7 +84,7 @@ export default function IcerikPage() {
         const newId = `loc_${Date.now()}`;
         setContent({
             ...content,
-            locations: [...content.locations, { id: newId, label: 'Yeni Konum', color: '#0ea5e9', icon: '📍' }]
+            locations: [...content.locations, { id: newId, label: 'Yeni Konum', color: '#0ea5e9', icon: 'MapPin' }]
         });
         setEditingItem(newId);
     };
@@ -110,7 +110,7 @@ export default function IcerikPage() {
         const newId = `status_${Date.now()}`;
         setContent({
             ...content,
-            statuses: [...content.statuses, { id: newId, label: 'Yeni Durum', color: '#6366f1', icon: '📋' }]
+            statuses: [...content.statuses, { id: newId, label: 'Yeni Durum', color: '#6366f1', icon: 'ClipboardText' }]
         });
         setEditingItem(newId);
     };
@@ -205,13 +205,11 @@ export default function IcerikPage() {
                                         borderRadius: 'var(--radius-md)',
                                         border: editingItem === loc.id ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
                                     }}>
-                                        <select
+                                        <IconPicker
                                             value={loc.icon}
-                                            onChange={(e) => updateLocation(loc.id, { icon: e.target.value })}
-                                            style={{ width: '60px', fontSize: '1.2rem', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                                        >
-                                            {emojiList.map(e => <option key={e} value={e}>{e}</option>)}
-                                        </select>
+                                            onChange={(val) => updateLocation(loc.id, { icon: val })}
+                                        />
+
                                         <input
                                             type="text"
                                             className="form-input"
@@ -228,6 +226,7 @@ export default function IcerikPage() {
                                         <button
                                             onClick={() => deleteLocation(loc.id)}
                                             style={{ padding: 'var(--space-sm)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-error)' }}
+                                            title="Sil"
                                         >
                                             🗑️
                                         </button>
@@ -254,13 +253,11 @@ export default function IcerikPage() {
                                         background: 'var(--color-bg)',
                                         borderRadius: 'var(--radius-md)',
                                     }}>
-                                        <select
+                                        <IconPicker
                                             value={status.icon}
-                                            onChange={(e) => updateStatus(status.id, { icon: e.target.value })}
-                                            style={{ width: '60px', fontSize: '1.2rem', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                                        >
-                                            {emojiList.map(e => <option key={e} value={e}>{e}</option>)}
-                                        </select>
+                                            onChange={(val) => updateStatus(status.id, { icon: val })}
+                                        />
+
                                         <input
                                             type="text"
                                             className="form-input"
@@ -281,12 +278,17 @@ export default function IcerikPage() {
                                             borderRadius: 'var(--radius-full)',
                                             fontSize: '0.75rem',
                                             fontWeight: 600,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
                                         }}>
-                                            {status.icon} {status.label}
+                                            <Icon name={status.icon as any} size="sm" color="white" />
+                                            {status.label}
                                         </div>
                                         <button
                                             onClick={() => deleteStatus(status.id)}
                                             style={{ padding: 'var(--space-sm)', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--color-error)' }}
+                                            title="Sil"
                                         >
                                             🗑️
                                         </button>
